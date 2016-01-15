@@ -1,28 +1,25 @@
 <?xml version="1.0"?>
-<!-- ant build file for WoT -->
+<!-- ant build file for Web of Trust Client Library -->
 
-<project name="WoT" default="dist" basedir="." xmlns:if="ant:if" xmlns:unless="ant:unless">
+<project name="WebOfTrustClient" default="dist" basedir="." xmlns:if="ant:if" xmlns:unless="ant:unless">
 	<property file="override.properties"/>
 
 	<property name="freenet-cvs-snapshot.location" location="../fred/dist/freenet.jar"/>
 	<property name="freenet-ext.location" location="../fred/lib/freenet/freenet-ext.jar"/>
 	<property name="bcprov.location" location="../fred/lib/bcprov.jar"/>
-	<property name="debug-node-wot-plugin.location" location="../fred/plugins/WebOfTrust.jar"/>
 	<property name="svn.revision" value="@custom@"/>
 	<property name="source-version" value="1.6"/>
 	<property name="target-version" value="1.6"/>
+	<property name="project-name" value="WebOfTrustClient"/>
 	<property name="build" location="build/"/>
 	<property name="build-test" location="build-test/"/>
-	<property name="build-test-jar" location="${build-test}/WebOfTrust-with-unit-tests.jar"/>
+	<property name="build-test-jar" location="${build-test}/${project-name}-tests.jar"/>
 	<property name="dist" location="dist/"/>
 	<property name="src" location="src/"/>
 	<property name="javadoc" location="javadoc/"/>
 	<property name="junit.location" value="/usr/share/java/junit4.jar"/>
 	<property name="hamcrest.location" value="/usr/share/java/hamcrest-core.jar"/>
-	<property name="version.src" value="plugins/WebOfTrust/Version.java" />
-	<property name="version.build" value="plugins/WebOfTrust/Version.class" />
 
-	<available file="src/plugins/WebOfTrust/Version.java" property="version.present"/>
 	<available file="${junit.location}" property="junit.present"/>
 	<available file="${hamcrest.location}" property="hamcrest.present"/>
 
@@ -80,29 +77,12 @@
 		<!-- Create the time stamp -->
 		<tstamp/>
 
-		<!-- Create the Version file with patched revision number in ${build} -->
-		<copy file="${src}/${version.src}" tofile="${build}/${version.src}" overwrite="true" />
-		<delete file="${build}/${version.build}" quiet="true" />
-		<replace file="${build}/${version.src}">
-			<replacefilter token="@custom@" value="${git.revision}"/>
-		</replace>
-		<echo message="Updated build version to ${git.revision} in ${build}/${version.src}"/>
-
-		<!-- Force compile of Version.java in case compile of ${src} didn't trigger it -->
-		<javac srcdir="${build}" destdir="${build}" debug="on" optimize="on" source="${source-version}" target="${target-version}">
-			<classpath>
-				<path refid="lib.path"/>
-			</classpath>
-			<include name="${version.src}"/>
-		</javac>
-
 		<!-- FIXME: remove the debug and replace with optimize -->
 		<javac srcdir="src/" destdir="${build}" debug="on" optimize="on" source="${source-version}" target="${target-version}" encoding="UTF-8">
 			<classpath>
 				<path refid="lib.path"/>
 			</classpath>
 			<include name="**/*.java"/>
-			<exclude name="${version.src}"/>
 		</javac>
 		<copy todir="${build}">
 			<fileset dir="src/">
@@ -134,9 +114,6 @@
 			<include name="**/*.java"/>
 		</javac>
 		<jar jarfile="${build-test-jar}" duplicate="fail">
-			<manifest>
-				<attribute name="Plugin-Main-Class" value="plugins.WebOfTrust.WebOfTrust"/>
-			</manifest>
 			<fileset dir="src/" casesensitive="no">
 				<include name="*.txt"/> <!-- Include the GPL -->
 			</fileset>
@@ -156,8 +133,7 @@
 			${junit.location}&#10;
 			${hamcrest.location}&#10;
 			Use parameter -Dtest.skip=true to compile without running the self-tests.&#10;
-			WARNING: Web of Trust uses lots of comprehensive tests, changing the code without&#10;
-			running them is a very bad idea!"/>
+			WARNING: Running tests is a minimum condition for accepting changes."/>
 		
 		<!-- Regular non-benchmark unit tests. -->
 		<junit printsummary="yes" fork="yes" haltonfailure="yes" unless:true="${test.benchmark}">
@@ -228,10 +204,7 @@
 	<target name="dist" depends="clean,compile,junit"
 		description="generate the distribution" >
 		
-		<jar jarfile="${dist}/WebOfTrust.jar" duplicate="fail">
-			<manifest>
-				<attribute name="Plugin-Main-Class" value="plugins.WebOfTrust.WebOfTrust"/>
-			</manifest>
+	<jar jarfile="${dist}/${project-name}.jar" duplicate="fail">
 			<fileset dir="src/" casesensitive="no">
 				<include name="*.txt"/> <!-- Include the GPL -->
 			</fileset>
@@ -256,6 +229,5 @@
 		<delete dir="${build}"/>
 		<delete dir="${build-test}"/>
 		<delete dir="${dist}"/>
-		<delete file="${debug-node-WebOfTrust-plugin.location}"/>
 	</target>
 </project>
