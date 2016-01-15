@@ -1,0 +1,261 @@
+<?xml version="1.0"?>
+<!-- ant build file for WoT -->
+
+<project name="WoT" default="dist" basedir="." xmlns:if="ant:if" xmlns:unless="ant:unless">
+	<property file="override.properties"/>
+
+	<property name="freenet-cvs-snapshot.location" location="../fred/dist/freenet.jar"/>
+	<property name="freenet-ext.location" location="../fred/lib/freenet/freenet-ext.jar"/>
+	<property name="bcprov.location" location="../fred/lib/bcprov.jar"/>
+	<property name="debug-node-wot-plugin.location" location="../fred/plugins/WebOfTrust.jar"/>
+	<property name="svn.revision" value="@custom@"/>
+	<property name="source-version" value="1.6"/>
+	<property name="target-version" value="1.6"/>
+	<property name="build" location="build/"/>
+	<property name="build-test" location="build-test/"/>
+	<property name="build-test-jar" location="${build-test}/WebOfTrust-with-unit-tests.jar"/>
+	<property name="dist" location="dist/"/>
+	<property name="src" location="src/"/>
+	<property name="javadoc" location="javadoc/"/>
+	<property name="junit.location" value="/usr/share/java/junit4.jar"/>
+	<property name="hamcrest.location" value="/usr/share/java/hamcrest-core.jar"/>
+	<property name="version.src" value="plugins/WebOfTrust/Version.java" />
+	<property name="version.build" value="plugins/WebOfTrust/Version.class" />
+
+	<available file="src/plugins/WebOfTrust/Version.java" property="version.present"/>
+	<available file="${junit.location}" property="junit.present"/>
+	<available file="${hamcrest.location}" property="hamcrest.present"/>
+
+	<path id="lib.path">
+		<pathelement location="${bcprov.location}"/>
+		<pathelement location="${freenet-ext.location}"/>
+		<pathelement location="${freenet-cvs-snapshot.location}"/>
+	</path>
+
+	<presetdef name="javac">
+		<!--
+		Workaround for ant 1.8 misfeature. TODO: Remove when ant fixes this.
+		
+		If we don't set this to false, we will get "warning: 'includeantruntime' was not set, defaulting to
+		build.sysclasspath=last; set to false for repeatable builds"
+		
+		(includeAntRuntime = "Whether to include the Ant run-time libraries in the classpath; defaults to yes, 
+		unless build.sysclasspath is set. It is usually best to set this to false so the script's behavior 
+		is not sensitive to the environment in which it is run."
+		Source: https://ant.apache.org/manual/Tasks/javac.html)
+		-->
+		<javac includeantruntime="false" />
+	</presetdef>
+
+	<exec executable="git"
+		failifexecutionfails="false"
+		errorProperty="git.errror"
+		outputproperty="git.describe"
+		resultproperty="git.result">
+		<arg value="describe" />
+		<arg value="--always" />
+		<arg value="--abbrev=4" />
+		<arg value="--dirty" />
+	</exec>
+
+	<condition property="git.revision" value="${git.describe}" else="@unknown@">
+		<and>
+			<equals arg1="${git.result}" arg2="0" />
+			<isset property="git.describe" />
+		</and>
+	</condition>
+
+	<target name="mkdir">
+		<mkdir dir="${build}"/>
+		<mkdir dir="${build-test}"/>
+		<mkdir dir="${build-test}/test"/>
+		<mkdir dir="${dist}"/>
+		<echo message="Using ${freenet-cvs-snapshot.location} as freenet-cvs-snapshot.jar"/>
+		<echo message="Using ${freenet-ext.location} as freenet-ext.jar"/>
+		<echo message="Using ${bcprov.location} as bcprov.jar"/>
+	</target>
+
+	<!-- ================================================== -->
+	<target name="compile" depends="mkdir" >
+		<!-- Create the time stamp -->
+		<tstamp/>
+
+		<!-- Create the Version file with patched revision number in ${build} -->
+		<copy file="${src}/${version.src}" tofile="${build}/${version.src}" overwrite="true" />
+		<delete file="${build}/${version.build}" quiet="true" />
+		<replace file="${build}/${version.src}">
+			<replacefilter token="@custom@" value="${git.revision}"/>
+		</replace>
+		<echo message="Updated build version to ${git.revision} in ${build}/${version.src}"/>
+
+		<!-- Force compile of Version.java in case compile of ${src} didn't trigger it -->
+		<javac srcdir="${build}" destdir="${build}" debug="on" optimize="on" source="${source-version}" target="${target-version}">
+			<classpath>
+				<path refid="lib.path"/>
+			</classpath>
+			<include name="${version.src}"/>
+		</javac>
+
+		<!-- FIXME: remove the debug and replace with optimize -->
+		<javac srcdir="src/" destdir="${build}" debug="on" optimize="on" source="${source-version}" target="${target-version}" encoding="UTF-8">
+			<classpath>
+				<path refid="lib.path"/>
+			</classpath>
+			<include name="**/*.java"/>
+			<exclude name="${version.src}"/>
+		</javac>
+		<copy todir="${build}">
+			<fileset dir="src/">
+				<include name="**/*.l10n" />
+			</fileset>
+		</copy>
+	</target>
+
+	<!-- ================================================== -->
+
+	<condition property="unit.dependencies">
+		<and>
+			<istrue value="${junit.present}"/>
+			<istrue value="${hamcrest.present}"/>
+		</and>
+	</condition>
+
+	<target name="unit-build" depends="compile" if="unit.dependencies">
+		<javac srcdir="test/" destdir="${build-test}/test" debug="on" optimize="on"
+				source="${source-version}" target="${target-version}" >
+			
+			<classpath>
+				<path refid="lib.path"/>
+				<pathelement path="${build}"/>
+				<pathelement location="${junit.location}"/>
+				<pathelement location="${hamcrest.location}"/>
+			</classpath>
+			<compilerarg value="-Xlint"/>
+			<include name="**/*.java"/>
+		</javac>
+		<jar jarfile="${build-test-jar}" duplicate="fail">
+			<manifest>
+				<attribute name="Plugin-Main-Class" value="plugins.WebOfTrust.WebOfTrust"/>
+			</manifest>
+			<fileset dir="src/" casesensitive="no">
+				<include name="*.txt"/> <!-- Include the GPL -->
+			</fileset>
+			<fileset dir="${build}/"/>
+			<fileset dir="${build-test}/test/"/> <!-- Separate directory to exclude the JAR -->
+		</jar>
+	</target>
+
+	<target name="junit" depends="unit-build" unless="${test.skip}"
+			description="Runs all unit tests. Options:&#10;
+		        - Set test.skip=true to skip&#10;
+		        - Set test.class=&lt;test class&gt; (e.g. test.class=plugins.WebOfTrust.WoTTest) to run a single test)&#10;
+		        - Set test.benchmark=true to run benchmarks.&#10;
+		        - Set test.unreliable=true to run tests which may fail on slow machines.">
+		
+		<fail unless="${unit.dependencies}" message="One of the unit test dependencies not found:&#10;
+			${junit.location}&#10;
+			${hamcrest.location}&#10;
+			Use parameter -Dtest.skip=true to compile without running the self-tests.&#10;
+			WARNING: Web of Trust uses lots of comprehensive tests, changing the code without&#10;
+			running them is a very bad idea!"/>
+		
+		<!-- Regular non-benchmark unit tests. -->
+		<junit printsummary="yes" fork="yes" haltonfailure="yes" unless:true="${test.benchmark}">
+			<classpath>
+				<path refid="lib.path"/>
+				<pathelement location="${build-test-jar}"/>
+				<pathelement location="${junit.location}"/>
+				<pathelement location="${hamcrest.location}"/>
+			</classpath>
+
+			<assertions><enable/></assertions>
+			<formatter type="plain" usefile="false"/>
+			<test if="test.class" name="${test.class}"/>
+			<batchtest unless="test.class" fork="yes">
+				<zipfileset src="${build-test-jar}">
+					<include name="**/*Test*.class"/>
+					<!-- Exclude member classes:
+					     Java will auto-generate switchtable classes for switch() upon enums.
+					     JUnit would then complain that those classes do not contain a public
+					     constructor. -->
+					<exclude name="**/*$*.class"/>
+					<exclude name="**/*Benchmark*.class"/>
+					<exclude name="**/SynchronousDelayedBackgroundJobTest.class"
+						unless="test.unreliable" />
+					<exclude name="**/TickerDelayedBackgroundJobTest.class"
+						unless="test.unreliable" />
+				</zipfileset>
+			</batchtest>
+			
+			<sysproperty key="extensiveTesting" value="${extensiveTesting}" />
+			<jvmarg value="-Djava.awt.headless=true"/>
+			<!-- Pass the name of the JAR to the tests so they can load it into a fred instance -->
+			<jvmarg value="-DWOT_test_jar=${build-test-jar}"/>
+		</junit>
+		
+		<!-- Benchmarks. They need assertions disabled so they're a task of their own. -->
+		<!-- Also, we set showoutput="true" so you get live output as benchmarks take a long time -->
+		<junit printsummary="yes" showoutput="true" fork="yes" haltonfailure="yes" if:true="${test.benchmark}">
+			<classpath>
+				<path refid="lib.path"/>
+				<pathelement location="${build-test-jar}"/>
+				<pathelement location="${junit.location}"/>
+				<pathelement location="${hamcrest.location}"/>
+			</classpath>
+
+			<assertions><disable/></assertions>
+			<formatter type="plain" usefile="false"/>
+			<test if="test.class" name="${test.class}"/>
+			<batchtest unless="test.class" fork="yes">
+				<zipfileset src="${build-test-jar}">
+					<include name="**/*Benchmark*.class"/>
+					<!-- Exclude member classes:
+					     Java will auto-generate switchtable classes for switch() upon enums.
+					     JUnit would then complain that those classes do not contain a public
+					     constructor. -->
+					<exclude name="**/*$*.class"/>
+				</zipfileset>
+			</batchtest>
+			
+			<sysproperty key="extensiveTesting" value="${extensiveTesting}" />
+			<jvmarg value="-Djava.awt.headless=true"/>
+			<!-- Pass the name of the JAR to the tests so they can load it into a fred instance -->
+			<jvmarg value="-DWOT_test_jar=${build-test-jar}"/>
+		</junit>
+	</target>
+
+	<!-- ================================================== -->
+	<target name="dist" depends="clean,compile,junit"
+		description="generate the distribution" >
+		
+		<jar jarfile="${dist}/WebOfTrust.jar" duplicate="fail">
+			<manifest>
+				<attribute name="Plugin-Main-Class" value="plugins.WebOfTrust.WebOfTrust"/>
+			</manifest>
+			<fileset dir="src/" casesensitive="no">
+				<include name="*.txt"/> <!-- Include the GPL -->
+			</fileset>
+			<fileset dir="${build}/"/>
+		</jar>
+	</target>
+
+	<!-- ================================================== -->
+	<target name="javadoc" description="generate javadocs">
+		<delete dir="${javadoc}"/>
+		<javadoc classpathref="lib.path" destdir="${javadoc}" author="true" version="true" use="true" private="true">
+			<fileset dir="src/" defaultexcludes="yes">
+				<include name="**/*.java"/>
+			</fileset>
+			<link href="http://docs.oracle.com/javase/6/docs/api/"/>
+			<link href="http://freenetproject.org/javadocs/"/>
+		</javadoc>
+	</target>
+
+	<!-- ================================================== -->
+	<target name="clean" description="Delete class files and docs dir and the plugin file in plugins/ of your debug node.">
+		<delete dir="${build}"/>
+		<delete dir="${build-test}"/>
+		<delete dir="${dist}"/>
+		<delete file="${debug-node-WebOfTrust-plugin.location}"/>
+	</target>
+</project>
