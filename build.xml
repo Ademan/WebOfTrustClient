@@ -7,13 +7,13 @@
 	<property name="freenet-cvs-snapshot.location" location="../fred/dist/freenet.jar"/>
 	<property name="freenet-ext.location" location="../fred/lib/freenet/freenet-ext.jar"/>
 	<property name="bcprov.location" location="../fred/lib/bcprov.jar"/>
-	<property name="debug-node-wot-plugin.location" location="../fred/plugins/WebOfTrust.jar"/>
+	<property name="debug-node-wot-plugin.location" location="../fred/plugins/WebOfTrustClient.jar"/>
 	<property name="svn.revision" value="@custom@"/>
 	<property name="source-version" value="1.6"/>
 	<property name="target-version" value="1.6"/>
 	<property name="build" location="build/"/>
 	<property name="build-test" location="build-test/"/>
-	<property name="build-test-jar" location="${build-test}/WebOfTrust-with-unit-tests.jar"/>
+	<property name="build-test-jar" location="${build-test}/WebOfTrustClient-tests.jar"/>
 	<property name="dist" location="dist/"/>
 	<property name="src" location="src/"/>
 	<property name="javadoc" location="javadoc/"/>
@@ -134,9 +134,6 @@
 			<include name="**/*.java"/>
 		</javac>
 		<jar jarfile="${build-test-jar}" duplicate="fail">
-			<manifest>
-				<attribute name="Plugin-Main-Class" value="plugins.WebOfTrust.WebOfTrust"/>
-			</manifest>
 			<fileset dir="src/" casesensitive="no">
 				<include name="*.txt"/> <!-- Include the GPL -->
 			</fileset>
@@ -177,36 +174,6 @@
 						unless="test.unreliable" />
 					<exclude name="**/TickerDelayedBackgroundJobTest.class"
 						unless="test.unreliable" />
-				</zipfileset>
-			</batchtest>
-			
-			<sysproperty key="extensiveTesting" value="${extensiveTesting}" />
-			<jvmarg value="-Djava.awt.headless=true"/>
-			<!-- Pass the name of the JAR to the tests so they can load it into a fred instance -->
-			<jvmarg value="-DWOT_test_jar=${build-test-jar}"/>
-		</junit>
-		
-		<!-- Benchmarks. They need assertions disabled so they're a task of their own. -->
-		<!-- Also, we set showoutput="true" so you get live output as benchmarks take a long time -->
-		<junit printsummary="yes" showoutput="true" fork="yes" haltonfailure="yes" if:true="${test.benchmark}">
-			<classpath>
-				<path refid="lib.path"/>
-				<pathelement location="${build-test-jar}"/>
-				<pathelement location="${junit.location}"/>
-				<pathelement location="${hamcrest.location}"/>
-			</classpath>
-
-			<assertions><disable/></assertions>
-			<formatter type="plain" usefile="false"/>
-			<test if="test.class" name="${test.class}"/>
-			<batchtest unless="test.class" fork="yes">
-				<zipfileset src="${build-test-jar}">
-					<include name="**/*Benchmark*.class"/>
-					<!-- Exclude member classes:
-					     Java will auto-generate switchtable classes for switch() upon enums.
-					     JUnit would then complain that those classes do not contain a public
-					     constructor. -->
-					<exclude name="**/*$*.class"/>
 				</zipfileset>
 			</batchtest>
 			
