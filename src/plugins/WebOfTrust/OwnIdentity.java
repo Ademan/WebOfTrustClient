@@ -134,24 +134,6 @@ public final class OwnIdentity extends Identity implements Cloneable, Serializab
 				throw new IllegalStateException("Unknown FetchState: " + getCurrentEditionFetchState());
 		}
 	}
-	
-	/**
-	 * Whether this OwnIdentity needs to be inserted or not.
-	 * We insert OwnIdentities when they have been modified AND at least once every three days.
-	 * @return Whether this OwnIdentity needs to be inserted or not
-	 */
-	public final boolean needsInsert() {
-		if(isRestoreInProgress())
-			return false;
-		
-		// TODO: Instead of only deciding by date whether the current edition was inserted, we should store both the date of
-		// the last insert and the date of the next scheduled insert AND the reason for the scheduled insert.
-		// There should be different reasons because some changes are not as important as others so we can have larger
-		// delays for unimportant reasons.
-		
-		return (getLastChangeDate().after(getLastInsertDate()) ||
-				(CurrentTimeUTC.getInMillis() - getLastInsertDate().getTime()) > IdentityInserter.MAX_UNCHANGED_TINE_BEFORE_REINSERT); 
-	}
 
 	/**
 	 * @return This OwnIdentity's insertURI
