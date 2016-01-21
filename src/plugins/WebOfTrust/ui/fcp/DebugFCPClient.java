@@ -14,7 +14,7 @@ import plugins.WebOfTrust.SubscriptionManager.IdentitiesSubscription;
 import plugins.WebOfTrust.SubscriptionManager.ScoresSubscription;
 import plugins.WebOfTrust.SubscriptionManager.TrustsSubscription;
 import plugins.WebOfTrust.Trust;
-import plugins.WebOfTrust.WebOfTrust;
+import plugins.WebOfTrust.WebOfTrustInterface;
 import plugins.WebOfTrust.ui.fcp.FCPClientReferenceImplementation.BeginSubscriptionSynchronizationHandler;
 import plugins.WebOfTrust.ui.fcp.FCPClientReferenceImplementation.ChangeSet;
 import plugins.WebOfTrust.ui.fcp.FCPClientReferenceImplementation.EndSubscriptionSynchronizationHandler;
@@ -24,6 +24,8 @@ import com.db4o.ObjectSet;
 
 import freenet.support.Logger;
 import freenet.support.Logger.LogLevel;
+
+import freenet.pluginmanager.PluginRespirator;
 
 /**
  * A FCP client which can connect to WOT itself for debugging:
@@ -39,7 +41,7 @@ import freenet.support.Logger.LogLevel;
  */
 public final class DebugFCPClient implements FCPClientReferenceImplementation.ConnectionStatusChangedHandler {
 	
-	private final WebOfTrust mWebOfTrust;
+	private final WebOfTrustInterface mWebOfTrust;
 	
 	private FCPClientReferenceImplementation mClient;
 	
@@ -85,10 +87,10 @@ public final class DebugFCPClient implements FCPClientReferenceImplementation.Co
 	}
 
 	
-	private DebugFCPClient(final WebOfTrust myWebOfTrust,
-	        final Map<String, Identity> identityStorage) {
+	private DebugFCPClient(final WebOfTrustInterface myWebOfTrust,
+	        final Map<String, Identity> identityStorage, PluginRespirator respirator) {
 		mClient = new FCPClientReferenceImplementation(
-		    identityStorage, myWebOfTrust.getPluginRespirator(), this);
+		    identityStorage, respirator, this);
 		mWebOfTrust = myWebOfTrust;
 		
 		mSynchronizationInProgress.put(Identity.class, false);
@@ -96,9 +98,9 @@ public final class DebugFCPClient implements FCPClientReferenceImplementation.Co
 		mSynchronizationInProgress.put(Score.class, false);
 	}
 	
-	public static DebugFCPClient construct(final WebOfTrust myWebOfTrust) {
+	public static DebugFCPClient construct(final WebOfTrustInterface myWebOfTrust, PluginRespirator respirator) {
 		final HashMap<String, Identity> identityStorage = new HashMap<String, Identity>();
-		final DebugFCPClient client = new DebugFCPClient(myWebOfTrust, identityStorage);
+		final DebugFCPClient client = new DebugFCPClient(myWebOfTrust, identityStorage, respirator);
 		client.mReceivedIdentities = identityStorage;
 		return client;
 	}
@@ -135,7 +137,7 @@ public final class DebugFCPClient implements FCPClientReferenceImplementation.Co
 		
 		Logger.normal(this, "terminate(): Amending edition hints...");
 		// Event-notifications does not propagate edition hints because that would cause a lot of traffic so we need to set them manually
-		final ObjectSet<Identity> allIdentities = mWebOfTrust.getAllIdentities();
+		final Collection<Identity> allIdentities = mWebOfTrust.getAllIdentities();
 		for(final Identity identity : allIdentities) {
 			final Identity received = mReceivedIdentities.get(identity.getID());
 			if(received == null)
@@ -143,11 +145,6 @@ public final class DebugFCPClient implements FCPClientReferenceImplementation.Co
 			
 			received.forceSetNewEditionHint(identity.getLatestEditionHint());
 		}
-		
-		Logger.normal(this, "terminate(): Validating received data against WOT database...");
-		validateAgainstDatabase(Identity.class, allIdentities, mReceivedIdentities);
-		validateAgainstDatabase(Trust.class, mWebOfTrust.getAllTrusts(), mReceivedTrusts);
-		validateAgainstDatabase(Score.class, mWebOfTrust.getAllScores(), mReceivedScores);
 		Logger.normal(this, "terminate() finished.");
 	}
 	

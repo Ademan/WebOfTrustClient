@@ -1240,7 +1240,7 @@ public final class SubscriptionManager implements PrioRunnable {
 	/**
 	 * The {@link WebOfTrust} to which this SubscriptionManager belongs.
 	 */
-	private final WebOfTrust mWoT;
+	private final WebOfTrustInterface mWoT;
 
 	/**
 	 * The database in which to store {@link Client}, {@link Subscription} and {@link Notification} objects.
@@ -1289,7 +1289,7 @@ public final class SubscriptionManager implements PrioRunnable {
 	 * 
 	 * @param myWoT The {@link WebOfTrust} to which this SubscriptionManager belongs. Its {@link WebOfTrust#getPluginRespirator()} may return null in unit tests.
 	 */
-	public SubscriptionManager(WebOfTrust myWoT) {
+	public SubscriptionManager(WebOfTrustInterface myWoT) {
 		mWoT = myWoT;
 		mDB = mWoT.getDatabase();
 	}
