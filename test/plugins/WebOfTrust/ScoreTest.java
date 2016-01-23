@@ -5,6 +5,9 @@ package plugins.WebOfTrust;
 
 import java.net.MalformedURLException;
 
+import org.junit.Before;
+import static org.junit.Assert.*;
+
 import plugins.WebOfTrust.exceptions.NotInTrustTreeException;
 import plugins.WebOfTrust.exceptions.UnknownIdentityException;
 import freenet.support.CurrentTimeUTC;
@@ -13,7 +16,7 @@ import freenet.support.CurrentTimeUTC;
  * @author xor (xor@freenetproject.org)
  * @author Julien Cornuwel (batosai@freenetproject.org)
  */
-public class ScoreTest extends AbstractJUnit3BaseTest {
+public class ScoreTest extends AbstractJUnit4BaseTest {
 	
 	private String requestUriA = "USK@Pn5K9Lt4pE0v5I3TDF40yPkDeE6IJP-nZ~zxxEq76Yc,t3vIf26txb~g6yP1f5cANe1Cb98uzcQBqCAG1PO03OQ,AQACAAE/WebOfTrust/0";
 	private String insertUriA = "USK@f3bEbhW5xmevbzAE2sfAsioNQezrKeak6vUYWhHAoLk,t3vIf26txb~g6yP1f5cANe1Cb98uzcQBqCAG1PO03OQ,AQECAAE/WebOfTrust/0";
@@ -21,24 +24,21 @@ public class ScoreTest extends AbstractJUnit3BaseTest {
 	private String insertUriB = "USK@CSkCsPeEqkRNbO~xtEpL~gMHzEydwwP6ofJBMMArZX4,WZkyt7jgLFJLnVpQ7q7vWBCkz8t8O9JbU1Qsg9bLvdo,AQECAAE/WebOfTrust/0";
 	private OwnIdentity a;
 	private OwnIdentity b;
+	private Score score;
 
+	public WebOfTrustInterface getWebOfTrust() { return new MockWebOfTrust(); }
 
-	@Override
+	@Before
 	protected void setUp() throws Exception {
-		super.setUp();
+		a = new OwnIdentity(getWebOfTrust(), insertUriA, "A", true); a.storeAndCommit();
+		b = new OwnIdentity(getWebOfTrust(), insertUriB, "B", true); b.storeAndCommit();
 		
-		a = new OwnIdentity(mWoT, insertUriA, "A", true); a.storeAndCommit();
-		b = new OwnIdentity(mWoT, insertUriB, "B", true); b.storeAndCommit();
-		
-		Score score = new Score(mWoT, a,b,100,1,40); score.storeWithoutCommit();
-		Persistent.checkedCommit(mWoT.getDatabase(), this);
-		
-		// TODO: Modify the test to NOT keep a reference to the identities as member variables so the followig also garbage collects them.
-		flushCaches();
+		score = new Score(getWebOfTrust(), a,b,100,1,40); score.storeWithoutCommit();
+		Persistent.checkedCommit(getWebOfTrust().getDatabase(), this);
 	}
 	
 	public void testClone() throws NotInTrustTreeException, IllegalArgumentException, IllegalAccessException, InterruptedException {
-		final Score original = mWoT.getScore(a, b);
+		final Score original = score;
 		
 		Thread.sleep(10); // Score contains Date mLastChangedDate which might not get properly cloned.
 		assertFalse(CurrentTimeUTC.get().equals(original.getDateOfLastChange()));
@@ -53,8 +53,8 @@ public class ScoreTest extends AbstractJUnit3BaseTest {
 	}
 	
 	public void testSerializeDeserialize() throws NotInTrustTreeException {
-		final Score original = mWoT.getScore(a, b);
-		final Score deserialized = (Score)Persistent.deserialize(mWoT, original.serialize());
+		final Score original = score;
+		final Score deserialized = (Score)Persistent.deserialize(getWebOfTrust(), original.serialize());
 		
 		assertNotSame(original, deserialized);
 		assertEquals(original, deserialized);
@@ -67,8 +67,7 @@ public class ScoreTest extends AbstractJUnit3BaseTest {
 	}
 
 	public void testScoreCreation() throws NotInTrustTreeException {
-		
-		Score score = mWoT.getScore(a, b);
+		final Score original = score;
 		
 		assertTrue(score.getScore() == 100);
 		assertTrue(score.getRank() == 1);
@@ -77,39 +76,14 @@ public class ScoreTest extends AbstractJUnit3BaseTest {
 		assertTrue(score.getTrustee() == b);
 	}
 	
-	// TODO: Move to WoTTest
-	public void testScorePersistence() throws MalformedURLException, UnknownIdentityException, NotInTrustTreeException {
-		a = mWoT.getOwnIdentityByURI(requestUriA);
-		b = mWoT.getOwnIdentityByURI(requestUriB);
-		final Score originalScore = mWoT.getScore(a, b);
-		
-		originalScore.checkedActivate(10);
-		
-		mWoT.terminate();
-		mWoT = null;
-		
-		flushCaches();
-		
-		mWoT = new WebOfTrust(getDatabaseFilename());
-		a = mWoT.getOwnIdentityByURI(requestUriA);
-		b = mWoT.getOwnIdentityByURI(requestUriB);
-		final Score score = mWoT.getScore(a, b);
-		
-		originalScore.initializeTransient(mWoT); // Prevent DatabaseClosedException in .equals()
-		
-		assertSame(score, mWoT.getScore(a, b));
-		assertNotSame(score, originalScore);
-		assertEquals(originalScore, score);
-	}
-	
 	public void testEquals() throws InterruptedException {
-		final Score score = new Score(mWoT, a, b, 100, 3, 2);
+		final Score score = new Score(getWebOfTrust(), a, b, 100, 3, 2);
 		
 		do {
 			Thread.sleep(1);
 		} while(score.getDateOfCreation().equals(CurrentTimeUTC.get()));
 		
-		final Score equalScore = new Score(mWoT, score.getTruster().clone(), score.getTrustee().clone(), score.getScore(), score.getRank(), score.getCapacity());
+		final Score equalScore = new Score(getWebOfTrust(), score.getTruster().clone(), score.getTrustee().clone(), score.getScore(), score.getRank(), score.getCapacity());
 		
 		assertEquals(score, score);
 		assertEquals(score, equalScore);
@@ -117,12 +91,12 @@ public class ScoreTest extends AbstractJUnit3BaseTest {
 		
 		final Object[] inequalObjects = new Object[] {
 			new Object(),
-			new Score(mWoT, (OwnIdentity)score.getTrustee(), score.getTruster(), score.getScore(), score.getRank(), score.getCapacity()),
-			new Score(mWoT, score.getTruster(), score.getTruster(), score.getScore(), score.getRank(), score.getCapacity()),
-			new Score(mWoT, (OwnIdentity)score.getTrustee(), score.getTrustee(), score.getScore(), score.getRank(), score.getCapacity()),
-			new Score(mWoT, score.getTruster(), score.getTrustee(), score.getScore()+1, score.getRank(), score.getCapacity()),
-			new Score(mWoT, score.getTruster(), score.getTrustee(), score.getScore(), score.getRank()+1, score.getCapacity()),
-			new Score(mWoT, score.getTruster(), score.getTrustee(), score.getScore(), score.getRank(), score.getCapacity()+1),
+			new Score(getWebOfTrust(), (OwnIdentity)score.getTrustee(), score.getTruster(), score.getScore(), score.getRank(), score.getCapacity()),
+			new Score(getWebOfTrust(), score.getTruster(), score.getTruster(), score.getScore(), score.getRank(), score.getCapacity()),
+			new Score(getWebOfTrust(), (OwnIdentity)score.getTrustee(), score.getTrustee(), score.getScore(), score.getRank(), score.getCapacity()),
+			new Score(getWebOfTrust(), score.getTruster(), score.getTrustee(), score.getScore()+1, score.getRank(), score.getCapacity()),
+			new Score(getWebOfTrust(), score.getTruster(), score.getTrustee(), score.getScore(), score.getRank()+1, score.getCapacity()),
+			new Score(getWebOfTrust(), score.getTruster(), score.getTrustee(), score.getScore(), score.getRank(), score.getCapacity()+1),
 		};
 		
 		for(Object other : inequalObjects) {

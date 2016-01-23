@@ -136,11 +136,6 @@ public final class SubscriptionManagerFCPTest extends AbstractFullNodeTest {
 	 * Key = {@link Score#getID()} 
 	 */
 	HashMap<String, Score> mReceivedScores = new HashMap<String, Score>();
-	
-	@Before public void setUpWOT() throws UnknownIdentityException, MalformedURLException {
-	    // Delete the seed identities since the test assumes the WOT database to be empty.
-	    deleteSeedIdentities();
-	}
 
 	@Test public void testSubscribeUnsubscribe()
 	        throws FSParseException, IOException, InterruptedException {
@@ -245,41 +240,6 @@ public final class SubscriptionManagerFCPTest extends AbstractFullNodeTest {
 		assertFalse(mReplyReceiver.hasNextResult());
 		
 		return id;
-	}
-
-	@Test public void testAllRandomized()
-	        throws InvalidParameterException, FSParseException, DuplicateTrustException,
-	        NotTrustedException, UnknownIdentityException, IOException, InterruptedException {
-	    
-		// TODO: Extract a generic AbstractJUnit4BaseTest function for random trust graph setup.
-		
-		final int initialOwnIdentityCount = 1;
-		final int initialIdentityCount = 100;
-		final int initialTrustCount = (initialIdentityCount*initialIdentityCount) / 10; // A complete graph would be identityCount² trust values.
-		final int eventCount = 100;
-		
-		// Random trust graph setup...
-		final ArrayList<Identity> identities = addRandomIdentities(initialIdentityCount);
-		
-		// At least one own identity needs to exist to ensure that scores are computed.
-		identities.addAll(addRandomOwnIdentities(initialOwnIdentityCount));
-		
-		addRandomTrustValues(identities, initialTrustCount);
-
-		/* Initial test data is set up */
-		subscribeAndSynchronize("Identities");
-		subscribeAndSynchronize("Trusts");
-		subscribeAndSynchronize("Scores");
-		
-		testWhetherReceivedDataMatchesMainDatabase();
-		
-		doRandomChangesToWOT(eventCount);
-		mWebOfTrust.getSubscriptionManager().run(); // Has no Ticker so we need to run() it manually
-		importObjectChangedEvents();
-        assertFalse(mReplyReceiver.hasNextResult());
-
-		testWhetherReceivedDataMatchesMainDatabase();
-		
 	}
 
     void testWhetherReceivedDataMatchesMainDatabase() {

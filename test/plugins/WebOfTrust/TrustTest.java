@@ -5,6 +5,9 @@ package plugins.WebOfTrust;
 
 import java.net.MalformedURLException;
 
+import static org.junit.Assert.*;
+import org.junit.Before;
+
 import freenet.support.CurrentTimeUTC;
 
 import plugins.WebOfTrust.exceptions.DuplicateTrustException;
@@ -16,30 +19,28 @@ import plugins.WebOfTrust.exceptions.UnknownIdentityException;
  * @author xor (xor@freenetproject.org)
  * @author Julien Cornuwel (batosai@freenetproject.org)
  */
-public class TrustTest extends AbstractJUnit3BaseTest {
+public class TrustTest extends AbstractJUnit4BaseTest {
 	
 	private String uriA = "USK@MF2Vc6FRgeFMZJ0s2l9hOop87EYWAydUZakJzL0OfV8,fQeN-RMQZsUrDha2LCJWOMFk1-EiXZxfTnBT8NEgY00,AQACAAE/WoT/0";
 	private String uriB = "USK@R3Lp2s4jdX-3Q96c0A9530qg7JsvA9vi2K0hwY9wG-4,ipkgYftRpo0StBlYkJUawZhg~SO29NZIINseUtBhEfE,AQACAAE/WoT/0";
 	private Identity a;
 	private Identity b;
-
+	private Trust trust;
 
 	@Override
-	protected void setUp() throws Exception {
-		super.setUp();
+	public WebOfTrustInterface getWebOfTrust() { return new MockWebOfTrust(); }
 
-		a = new Identity(mWoT, uriA, "A", true); a.storeWithoutCommit();
-		b = new Identity(mWoT, uriB, "B", true); b.storeWithoutCommit();
+	@Before
+	protected void setUp() throws Exception {
+		a = new Identity(getWebOfTrust(), uriA, "A", true); a.storeWithoutCommit();
+		b = new Identity(getWebOfTrust(), uriB, "B", true); b.storeWithoutCommit();
 		
-		Trust trust = new Trust(mWoT, a,b,(byte)100,"test"); trust.storeWithoutCommit();
-		Persistent.checkedCommit(mWoT.getDatabase(), this);
-		
-		// TODO: Modify the test to NOT keep a reference to the identities as member variables so the followig also garbage collects them.
-		flushCaches();
+		trust = new Trust(getWebOfTrust(), a,b,(byte)100,"test"); trust.storeWithoutCommit();
+		Persistent.checkedCommit(getWebOfTrust().getDatabase(), this);
 	}
 	
 	public void testClone() throws DuplicateTrustException, NotTrustedException, IllegalArgumentException, IllegalAccessException, InterruptedException {
-		final Trust original = mWoT.getTrust(a, b);
+		final Trust original = trust.clone();
 		
 		Thread.sleep(10); // Trust contains Date mLastChangedDate which might not get properly cloned.
 		assertFalse(CurrentTimeUTC.get().equals(original.getDateOfLastChange()));
@@ -55,39 +56,39 @@ public class TrustTest extends AbstractJUnit3BaseTest {
 	
 	public void testConstructor() throws InvalidParameterException {		
 		try {
-			new Trust(mWoT, a, null, (byte)100, "test");
+			new Trust(getWebOfTrust(), a, null, (byte)100, "test");
 			fail("Constructor allows trustee to be null");
 		}
 		catch(NullPointerException e) { }
 		
 		try {
-			new Trust(mWoT, null, a, (byte)100, "test");
+			new Trust(getWebOfTrust(), null, a, (byte)100, "test");
 			fail("Constructor allows truster to be null");
 		}
 		catch(NullPointerException e) {}
 		
 		try {
-			new Trust(mWoT, a, b, (byte)-101, "test");
+			new Trust(getWebOfTrust(), a, b, (byte)-101, "test");
 			fail("Constructor allows values less than -100");
 		}
 		catch(InvalidParameterException e) {}
 		
 		try {
-			new Trust(mWoT, a, b, (byte)101, "test");
+			new Trust(getWebOfTrust(), a, b, (byte)101, "test");
 			fail("Constructor allows values higher than 100");
 		}
 		catch(InvalidParameterException e) {}
 		
 		try { 
-			new Trust(mWoT, a, a, (byte)100, "test");
+			new Trust(getWebOfTrust(), a, a, (byte)100, "test");
 			fail("Constructor allows self-referential trust values");
 		}
 		catch(InvalidParameterException e) { }
 	}
 	
 	public void testSerializeDeserialize() throws DuplicateTrustException, NotTrustedException {
-		final Trust original = mWoT.getTrust(a, b);
-		final Trust deserialized = (Trust)Persistent.deserialize(mWoT, original.serialize());
+		final Trust original = trust.clone();
+		final Trust deserialized = (Trust)Persistent.deserialize(getWebOfTrust(), original.serialize());
 		
 		assertNotSame(original, deserialized);
 		assertEquals(original, deserialized);
@@ -100,28 +101,7 @@ public class TrustTest extends AbstractJUnit3BaseTest {
 	}
 
 	public void testTrust() throws DuplicateTrustException, NotTrustedException {
-
-		Trust trust = mWoT.getTrust(a, b); 
-		assertTrue(trust.getTruster() == a);
-		assertTrue(trust.getTrustee() == b);
-		assertTrue(trust.getValue() == 100);
-		assertEquals("test", trust.getComment());
-	}
-	
-	public void testTrustPersistence() throws MalformedURLException, UnknownIdentityException, DuplicateTrustException, NotTrustedException {
-		
-		mWoT.terminate();
-		mWoT = null;
-		
-		System.gc();
-		System.runFinalization();
-		
-		mWoT = new WebOfTrust(getDatabaseFilename());
-		
-		a = mWoT.getIdentityByURI(uriA);
-		b = mWoT.getIdentityByURI(uriB);
-		Trust trust = mWoT.getTrust(a, b);
-		
+		final Trust original = trust.clone();
 		assertTrue(trust.getTruster() == a);
 		assertTrue(trust.getTrustee() == b);
 		assertTrue(trust.getValue() == 100);

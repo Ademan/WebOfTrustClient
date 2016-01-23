@@ -10,10 +10,12 @@ import plugins.WebOfTrust.exceptions.InvalidParameterException;
 import freenet.keys.FreenetURI;
 import freenet.support.CurrentTimeUTC;
 
+import static org.junit.Assert.*;
+
 /**
  * @author xor (xor@freenetproject.org)
  */
-public class OwnIdentityTest extends AbstractJUnit3BaseTest {
+public class OwnIdentityTest extends AbstractJUnit4BaseTest {
 	
 	private final String requestURIStringUSK = "USK@sdFxM0Z4zx4-gXhGwzXAVYvOUi6NRfdGbyJa797bNAg,ZP4aASnyZax8nYOvCOlUebegsmbGQIXfVzw7iyOsXEc,AQACAAE/WebOfTrust/23";
 	private final String requestURIStringUSKNonWOT = "USK@sdFxM0Z4zx4-gXhGwzXAVYvOUi6NRfdGbyJa797bNAg,ZP4aASnyZax8nYOvCOlUebegsmbGQIXfVzw7iyOsXEc,AQACAAE/Test/23";
@@ -26,8 +28,10 @@ public class OwnIdentityTest extends AbstractJUnit3BaseTest {
 	private final String insertURIStringSSKNonWOT = "SSK@ZTeIa1g4T3OYCdUFfHrFSlRnt5coeFFDCIZxWSb7abs,ZP4aASnyZax8nYOvCOlUebegsmbGQIXfVzw7iyOsXEc,AQECAAE/Test-23";
 	private final String insertURIStringSSKPlain = "SSK@ZTeIa1g4T3OYCdUFfHrFSlRnt5coeFFDCIZxWSb7abs,ZP4aASnyZax8nYOvCOlUebegsmbGQIXfVzw7iyOsXEc,AQECAAE/";
 
+	public WebOfTrustInterface getWebOfTrust() {return new MockWebOfTrust();}
+
 	public void testConstructors() throws MalformedURLException, InvalidParameterException {
-		final OwnIdentity identity = new OwnIdentity(mWoT, "SSK@ZTeIa1g4T3OYCdUFfHrFSlRnt5coeFFDCIZxWSb7abs,ZP4aASnyZax8nYOvCOlUebegsmbGQIXfVzw7iyOsXEc,AQECAAE/",
+		final OwnIdentity identity = new OwnIdentity(getWebOfTrust(), "SSK@ZTeIa1g4T3OYCdUFfHrFSlRnt5coeFFDCIZxWSb7abs,ZP4aASnyZax8nYOvCOlUebegsmbGQIXfVzw7iyOsXEc,AQECAAE/",
 				getRandomLatinString(OwnIdentity.MAX_NICKNAME_LENGTH), true);
 		
 		assertEquals(0, identity.getEdition());
@@ -47,7 +51,7 @@ public class OwnIdentityTest extends AbstractJUnit3BaseTest {
 		
 		for(String uri : inacceptableURIs) {
 			try {
-				new OwnIdentity(mWoT, uri, "test", true);
+				new OwnIdentity(getWebOfTrust(), uri, "test", true);
 				fail("OwnIdentity should only construct with insert URIs");
 			} catch(MalformedURLException e) {}
 		}
@@ -56,11 +60,11 @@ public class OwnIdentityTest extends AbstractJUnit3BaseTest {
 		
 		ArrayList<OwnIdentity> identities = new ArrayList<OwnIdentity>(5 + 1);
 		
-		identities.add(new OwnIdentity(mWoT, insertURIStringUSK, "test", true));
-		identities.add(new OwnIdentity(mWoT, insertURIStringUSKNonWOT, "test", true));
-		identities.add(new OwnIdentity(mWoT, insertURIStringSSK, "test", true));
-		identities.add(new OwnIdentity(mWoT, insertURIStringSSKNonWOT, "test", true));
-		identities.add(new OwnIdentity(mWoT, insertURIStringSSKPlain, "test", true));
+		identities.add(new OwnIdentity(getWebOfTrust(), insertURIStringUSK, "test", true));
+		identities.add(new OwnIdentity(getWebOfTrust(), insertURIStringUSKNonWOT, "test", true));
+		identities.add(new OwnIdentity(getWebOfTrust(), insertURIStringSSK, "test", true));
+		identities.add(new OwnIdentity(getWebOfTrust(), insertURIStringSSKNonWOT, "test", true));
+		identities.add(new OwnIdentity(getWebOfTrust(), insertURIStringSSKPlain, "test", true));
 		
 		FreenetURI expectedInsertURI = new FreenetURI(insertURIStringUSK).setSuggestedEdition(0);
 		FreenetURI expectedRequestURI = new FreenetURI(requestURIStringUSK).setSuggestedEdition(0);
@@ -78,7 +82,7 @@ public class OwnIdentityTest extends AbstractJUnit3BaseTest {
 	 * - which meets the requirements of {@link AbstractJUnit3BaseTest#testClone(Class, Object, Object)}
 	 */
 	public void testClone() throws MalformedURLException, InvalidParameterException, InterruptedException, IllegalArgumentException, IllegalAccessException {
-		final OwnIdentity original = new OwnIdentity(mWoT, getRandomSSKPair()[0], getRandomLatinString(OwnIdentity.MAX_NICKNAME_LENGTH), true);
+		final OwnIdentity original = new OwnIdentity(getWebOfTrust(), getRandomInsertURI(), getRandomLatinString(OwnIdentity.MAX_NICKNAME_LENGTH), true);
 		original.setEdition(10); // Make sure to use a non-default edition
 		original.setNewEditionHint(10); // Make sure to use a non-default edition hint
 		original.updateLastInsertDate();
@@ -100,8 +104,8 @@ public class OwnIdentityTest extends AbstractJUnit3BaseTest {
 	}
 	
 	public void testSerializeDeserialize() throws MalformedURLException, InvalidParameterException {
-		final OwnIdentity original = new OwnIdentity(mWoT, getRandomSSKPair()[0], getRandomLatinString(OwnIdentity.MAX_NICKNAME_LENGTH), true);
-		final OwnIdentity deserialized = (OwnIdentity)Persistent.deserialize(mWoT, original.serialize());
+		final OwnIdentity original = new OwnIdentity(getWebOfTrust(), getRandomInsertURI(), getRandomLatinString(OwnIdentity.MAX_NICKNAME_LENGTH), true);
+		final OwnIdentity deserialized = (OwnIdentity)Persistent.deserialize(getWebOfTrust(), original.serialize());
 		
 		assertNotSame(original, deserialized);
 		assertEquals(original, deserialized);

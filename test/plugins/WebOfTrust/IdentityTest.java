@@ -5,8 +5,13 @@ package plugins.WebOfTrust;
 
 import java.net.MalformedURLException;
 import java.util.Date;
+import java.util.Collection;
 
 import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.Before;
+
+import static org.junit.Assert.*;
 
 import plugins.WebOfTrust.Identity.FetchState;
 import plugins.WebOfTrust.Identity.IdentityID;
@@ -22,7 +27,7 @@ import freenet.support.CurrentTimeUTC;
 /**
  * @author xor (xor@freenetproject.org) where not specified otherwise
  */
-public final class IdentityTest extends AbstractJUnit3BaseTest {
+public final class IdentityTest extends AbstractJUnit4BaseTest {
 	
 	private final String requestUriString = "USK@sdFxM0Z4zx4-gXhGwzXAVYvOUi6NRfdGbyJa797bNAg,ZP4aASnyZax8nYOvCOlUebegsmbGQIXfVzw7iyOsXEc,AQACAAE/WebOfTrust/23";
 	private final String requestUriStringSSK = "SSK@sdFxM0Z4zx4-gXhGwzXAVYvOUi6NRfdGbyJa797bNAg,ZP4aASnyZax8nYOvCOlUebegsmbGQIXfVzw7iyOsXEc,AQACAAE/WebOfTrust/23";
@@ -43,10 +48,7 @@ public final class IdentityTest extends AbstractJUnit3BaseTest {
 	/**
 	 * @author Julien Cornuwel (batosai@freenetproject.org)
 	 */
-	@Override
-	protected void setUp() throws Exception {
-		super.setUp();
-		
+	@Before protected void setUp() throws Exception {
 		requestUri = new FreenetURI(requestUriString);
 		requestUriSSK = new FreenetURI(requestUriStringSSK);
 		requestUriSSKPlain = new FreenetURI(requestUriStringSSKPlain);
@@ -54,13 +56,11 @@ public final class IdentityTest extends AbstractJUnit3BaseTest {
 		insertUriSSK = new FreenetURI(insertUriStringSSK);
 		insertUriSSKPlain = new FreenetURI(insertUriStringSSKPlain);
 
-		identity = new Identity(mWoT, requestUri, "test", true);
+		identity = new Identity(getWebOfTrust(), requestUri, "test", true);
 		identity.addContext("bleh");
 		identity.setProperty("testproperty","foo1a");
 		identity.storeAndCommit();
 		
-		// TODO: Modify the test to NOT keep a reference to the identities as member variables so the following also garbage collects them.
-		flushCaches();
 	}
 	
 	/**
@@ -70,7 +70,7 @@ public final class IdentityTest extends AbstractJUnit3BaseTest {
 	 * - which meets the requirements of {@link AbstractJUnit3BaseTest#testClone(Class, Object, Object)}
 	 */
 	public void testClone() throws MalformedURLException, InvalidParameterException, IllegalArgumentException, IllegalAccessException, InterruptedException {
-		final Identity original = new Identity(mWoT, getRandomSSKPair()[1], getRandomLatinString(Identity.MAX_NICKNAME_LENGTH), true);
+		final Identity original = new Identity(getWebOfTrust(), getRandomInsertURI(), getRandomLatinString(Identity.MAX_NICKNAME_LENGTH), true);
 		original.setEdition(10); // Make sure to use a non-default edition
 		original.setNewEditionHint(20); // Make sure to use a non-default edition hint
 		original.addContext(getRandomLatinString(Identity.MAX_CONTEXT_NAME_LENGTH));
@@ -89,70 +89,45 @@ public final class IdentityTest extends AbstractJUnit3BaseTest {
 		testClone(Identity.class, original, clone);
 	}
 	
+	@Test
 	public void testSerializeDeserialize() throws MalformedURLException, InvalidParameterException {
-		final Identity original = new Identity(mWoT, getRandomSSKPair()[1], getRandomLatinString(Identity.MAX_NICKNAME_LENGTH), true);
-		final Identity deserialized = (Identity)Persistent.deserialize(mWoT, original.serialize());
+		final Identity original = new Identity(getWebOfTrust(), new FreenetURI("USK", "foo-1"), getRandomLatinString(Identity.MAX_NICKNAME_LENGTH), true);
+		final Identity deserialized = (Identity)Persistent.deserialize(getWebOfTrust(), original.serialize());
 		
 		assertNotSame(original, deserialized);
 		assertEquals(original, deserialized);
 	}
 	
+	@Test
 	public void testConstructors() throws MalformedURLException, InvalidParameterException {
-		final Identity identity = new Identity(mWoT, "USK@sdFxM0Z4zx4-gXhGwzXAVYvOUi6NRfdGbyJa797bNAg,ZP4aASnyZax8nYOvCOlUebegsmbGQIXfVzw7iyOsXEc,AQACAAE/WebOfTrust/-1",
+		final Identity identity = new Identity(getWebOfTrust(), "USK@sdFxM0Z4zx4-gXhGwzXAVYvOUi6NRfdGbyJa797bNAg,ZP4aASnyZax8nYOvCOlUebegsmbGQIXfVzw7iyOsXEc,AQACAAE/WebOfTrust/-1",
 				getRandomLatinString(Identity.MAX_NICKNAME_LENGTH), true);
 		
 		assertEquals(0, identity.getEdition());
 		assertEquals(0, identity.getLatestEditionHint());
 	}
 	
+	@Test
 	public void testInsertRequestUriMixup() throws InvalidParameterException {		
 		try {
-			new Identity(mWoT, new FreenetURI(insertUriString), "test", true);
+			new Identity(getWebOfTrust(), new FreenetURI(insertUriString), "test", true);
 			fail("Identity creation with insert URI instead of request URI allowed!");
 		} catch (MalformedURLException e) {
 			// This is what we expect.
 		}
 		
 		try {
-			new OwnIdentity(mWoT, requestUri, "test", true);
+			new OwnIdentity(getWebOfTrust(), requestUri, "test", true);
 			fail("OwnIdentity creation with request URI instead of insert URI allowed!");
 		} catch (MalformedURLException e) {
 			// This is what we expect.
 		}
 	}
-	
-	/**
-	 * @author Julien Cornuwel (batosai@freenetproject.org)
-	 */
-	public void testIdentityStored() {
-		ObjectSet<Identity> result = mWoT.getAllIdentities();
-		assertEquals(1, result.size());
-		
-		assertEquals(identity, result.next());
-	}
-
-	/**
-	 * TODO: Move to WoTTest
-	 * @author Julien Cornuwel (batosai@freenetproject.org)
-	 */
-	public void testGetByURI() throws MalformedURLException, UnknownIdentityException {
-		assertEquals(identity, mWoT.getIdentityByURI(requestUri));
-		assertEquals(identity, mWoT.getIdentityByURI(requestUriSSK));
-		assertEquals(identity, mWoT.getIdentityByURI(requestUriSSKPlain));
-		assertEquals(identity, mWoT.getIdentityByURI(requestUriString));
-		assertEquals(identity, mWoT.getIdentityByURI(requestUriStringSSK));
-		assertEquals(identity, mWoT.getIdentityByURI(requestUriStringSSKPlain));
-		assertEquals(identity, mWoT.getIdentityByURI(insertUri));
-		assertEquals(identity, mWoT.getIdentityByURI(insertUriSSK));
-		assertEquals(identity, mWoT.getIdentityByURI(insertUriSSKPlain));
-		assertEquals(identity, mWoT.getIdentityByURI(insertUriString));
-		assertEquals(identity, mWoT.getIdentityByURI(insertUriStringSSK));
-		assertEquals(identity, mWoT.getIdentityByURI(insertUriStringSSKPlain));
-	}
 
 	/**
 	 * @author Julien Cornuwel (batosai@freenetproject.org)
 	 */
+	@Test
 	public void testContexts() throws InvalidParameterException {
 		assertFalse(identity.hasContext("foo"));
 		identity.addContext("test");
@@ -166,6 +141,7 @@ public final class IdentityTest extends AbstractJUnit3BaseTest {
 	/**
 	 * @author Julien Cornuwel (batosai@freenetproject.org)
 	 */
+	@Test
 	public void testProperties() throws InvalidParameterException {
 		identity.setProperty("foo", "bar");
 		assertEquals("bar", identity.getProperty("foo"));
@@ -179,38 +155,7 @@ public final class IdentityTest extends AbstractJUnit3BaseTest {
 		}
 	}
 	
-	/**
-	 * @author Julien Cornuwel (batosai@freenetproject.org)
-	 */
-	public void testPersistence() throws MalformedURLException, UnknownIdentityException {
-		flushCaches();
-		
-		assertEquals(1, mWoT.getAllIdentities().size());
-		
-		Identity stored = mWoT.getIdentityByURI(requestUriString);
-		assertSame(identity, stored);
-		
-		identity.checkedActivate(10);
-		
-		stored = null;
-		mWoT.terminate();
-		mWoT = null;
-		
-		flushCaches();
-		
-		mWoT = new WebOfTrust(getDatabaseFilename());
-		
-		identity.initializeTransient(mWoT);  // Prevent DatabaseClosedException in .equals()
-		
-		assertEquals(1, mWoT.getAllIdentities().size());	
-		
-		stored = mWoT.getIdentityByURI(requestUriString);
-		assertNotSame(identity, stored);
-		assertEquals(identity, stored);
-		assertEquals(identity.getAddedDate(), stored.getAddedDate());
-		assertEquals(identity.getLastChangeDate(), stored.getLastChangeDate());
-	}
-	
+	@Test
 	public void testValidateNickname() {
 		try {
             // '@' needs to be disallowed because we use it in Identity.getShortestUniqueNickname()
@@ -224,22 +169,25 @@ public final class IdentityTest extends AbstractJUnit3BaseTest {
 		// TODO: Implement a full test.
 	}
 
+	@Test
 	public final void testGetID() {
 		assertEquals(Base64.encode(identity.getRequestURI().getRoutingKey()), identity.getID());
 	}
 
 	// TODO: Move to a seperate test class for IdentityID
+	@Test
 	public final void testGetIDFromURI() throws MalformedURLException {
 		assertEquals(Base64.encode(requestUri.getRoutingKey()), IdentityID.constructAndValidateFromURI(new FreenetURI(requestUriString)).toString());
 		assertEquals(Base64.encode(requestUri.getRoutingKey()), IdentityID.constructAndValidateFromURI(new FreenetURI(insertUriString)).toString());
 	}
 
+	@Test
 	public final void testGetRequestURI() throws InvalidParameterException, MalformedURLException {
 		// We generate a new identity because we want to make sure that the edition of the URI is 0 - the identity constructor will set it to 0 otherwise
 		// We need the edition not to change so the assertNotSame test makes sense.
 		
 		final FreenetURI uriWithProperEdition = new FreenetURI("USK@R3Lp2s4jdX-3Q96c0A9530qg7JsvA9vi2K0hwY9wG-4,ipkgYftRpo0StBlYkJUawZhg~SO29NZIINseUtBhEfE,AQACAAE/WebOfTrust/0");
-		final Identity identity = new Identity(mWoT, uriWithProperEdition, "test", true);
+		final Identity identity = new Identity(getWebOfTrust(), uriWithProperEdition, "test", true);
 		
 		assertEquals(uriWithProperEdition, identity.getRequestURI());
 		
@@ -247,6 +195,7 @@ public final class IdentityTest extends AbstractJUnit3BaseTest {
 		assertNotSame(uriWithProperEdition, identity.getRequestURI());
 	}
 	
+	@Test
 	public final void testGetEdition() throws InvalidParameterException {
 		assertEquals(23, requestUri.getSuggestedEdition());
 		// The edition which is passed in during construction of the identity MUST NOT be stored as the current edition
@@ -257,6 +206,7 @@ public final class IdentityTest extends AbstractJUnit3BaseTest {
 		assertEquals(10, identity.getEdition());
 	}
 	
+	@Test
 	public final void testGetCurrentEditionFetchState() {
 		assertEquals(FetchState.NotFetched, identity.getCurrentEditionFetchState());
 		
@@ -272,6 +222,9 @@ public final class IdentityTest extends AbstractJUnit3BaseTest {
 		assertEquals(FetchState.NotFetched, identity.getCurrentEditionFetchState());
 	}
 
+	public WebOfTrustInterface getWebOfTrust() { return new MockWebOfTrust(); }
+
+	@Test
 	public final void testSetEdition() throws InvalidParameterException, InterruptedException {
 		// Test preconditions
 		assertEquals(0, identity.getEdition());
@@ -344,41 +297,4 @@ public final class IdentityTest extends AbstractJUnit3BaseTest {
 		assertTrue(oldLastChangedDate.equals(identity.getLastChangeDate()));
 		// Test done.
 	}
-	
-
-// TODO: Finish implementation and enable.	
-//	public void testEquals() {
-//		do {
-//			Thread.sleep(1);
-//		} while(identity.getAddedDate().equals(CurrentTimeUTC.get()));
-//		
-//		assertEquals(identity, identity);
-//		assertEquals(identity, identity.clone());
-//		
-//		
-//	
-//		
-//		Object[] inequalObjects = new Object[] {
-//			new Object(),
-//			new Identity(uriB, identity.getNickname(), identity.doesPublishTrustList());
-//		};
-//		
-//		for(Object other : inequalObjects)
-//			assertFalse(score.equals(other));
-//	}
-//	
-//	public void testClone() {
-//		do {
-//		    Thread.sleep(1);
-//		} while(identity.getAddedDate().equals(CurrentTimeUTC.get()));
-//		
-//		Identity clone = identity.clone();
-//		assertNotSame(clone, identity);
-//		assertEquals(identity.getEdition(), clone.getEdition());
-//		assertEquals(identity.getID(), clone.getID());
-//		assertEquals(identity.getLatestEditionHint(), clone.getLatestEditionHint());
-//		assertNotSame(identity.getNickname(), clone.getNickname());
-//		assertEquals(identity.getNickname(), clone.getNickname());
-//		assertEquals(identity.getProperties())
-//	}
 }
