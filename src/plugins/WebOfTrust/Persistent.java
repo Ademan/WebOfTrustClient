@@ -87,12 +87,6 @@ public abstract class Persistent implements Serializable {
 	static {
 		Logger.registerClass(Persistent.class);
 	}
-
-	/**
-	 * This annotation should be added to all Persistent classes which the database should be configured to generate an index on.
-	 * If a class is indexed you MUST add it to the list of persistent classes in {@link WebOfTrust.openDatabase} 
-	 */
-	public @interface IndexedClass { }
 	
 	public void testDatabaseIntegrity() {
 		testDatabaseIntegrity(mWebOfTrust, mDB);
