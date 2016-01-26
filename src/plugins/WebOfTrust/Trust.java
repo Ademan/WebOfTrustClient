@@ -40,11 +40,9 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 	public static transient final byte MIN_TRUST_VALUE = -MAX_TRUST_VALUE;
 	
 	/** The identity which gives the trust. */
-	@IndexedField
 	private final Identity mTruster;
 	
 	/** The identity which receives the trust. */
-	@IndexedField
 	private final Identity mTrustee;
 	
 	/**
@@ -69,11 +67,9 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 	 * query.descend("mID").constrain(mTruster.getID() + "@" + mTrustee.getID()).identity();
 	 * final ObjectSet<Trust> result = new Persistent.InitializingObjectSet<Trust>(this, query); 
 	 */
-	@IndexedField
 	private String mID;
 	
 	/** The value assigned with the trust, from -100 to +100 where negative means distrust */
-	@IndexedField
 	private byte mValue;
 	
 	/** An explanation of why the trust value was assigned */
@@ -101,7 +97,6 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 	// TODO: Optimization: An index on this WOULD make sense if db4o supported joined indices. then we would create an index on
 	// {mTruster,mTrusterTrustListEdition}. WITHOUT joined indicies, the way getGivenTrustsOlderThan works will make the query faster if
 	// db4o uses the index on mTruster instead of the index on mTrusterTrustListEditon, so we don't create that index.
-	// @IndexedField
 	private long mTrusterTrustListEdition;
 
     /** An {@link UUID} set by {@link EventSource#setVersionID(UUID)}. See its JavaDoc for an

@@ -28,11 +28,9 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	private static transient final long serialVersionUID = 1L;
 	
 	/** The OwnIdentity which assigns this score to the trustee */
-	@IndexedField
 	private final OwnIdentity mTruster;
 	
 	/** The Identity which is rated by this score */
-	@IndexedField
 	private final Identity mTrustee;
 	
 	/**
@@ -57,11 +55,9 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 * query.descend("mID").constrain(mTruster.getID() + "@" + mTrustee.getID()).identity();
 	 * final ObjectSet<Score> result = new Persistent.InitializingObjectSet<Score>(this, query); 
 	 */
-	@IndexedField
 	private String mID;
 	
 	/** The actual score of the Identity. Used to decide if the OwnIdentity sees the Identity or not */
-	@IndexedField
 	private int mValue;
 	
 	/**

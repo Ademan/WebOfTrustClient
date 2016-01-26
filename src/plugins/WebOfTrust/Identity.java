@@ -47,7 +47,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	public static transient final int MAX_PROPERTY_AMOUNT = 64;
 
 	/** A unique identifier used to query this Identity from the database. In fact, it is simply a String representing its routing key. */
-	@IndexedField
 	protected final String mID;
 	
 	/** The USK requestURI used to fetch this identity from Freenet. It's edition number is the one of the data which we have currently stored
@@ -95,14 +94,12 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	protected long mLatestEditionHint;
 	
 	/** @see #getLastFetchedDate() */
-	@IndexedField
 	protected Date mLastFetchedDate;
 	
 	/** Date of this identity's last modification, for example when it has received new contexts, etc.*/
 	protected Date mLastChangedDate;
 	
 	/** The nickname of this Identity */
-	@IndexedField
 	protected String mNickname;
 	
 	/** Whether this Identity publishes its trust list or not */

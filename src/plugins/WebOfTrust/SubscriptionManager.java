@@ -108,7 +108,6 @@ public final class SubscriptionManager implements PrioRunnable {
 		 * 
 		 * @see #getFCP_ID()
 		 */
-		@IndexedField
 		private final String mFCP_ID;
 
 		/**
@@ -258,7 +257,6 @@ public final class SubscriptionManager implements PrioRunnable {
 		/**
 		 * The {@link Client} which created this {@link Subscription}.
 		 */
-		@IndexedField
 		private final Client mClient;
 		
 		/**
@@ -266,7 +264,6 @@ public final class SubscriptionManager implements PrioRunnable {
 		 * 
 		 * @see #getID()
 		 */
-		@IndexedField
 		private final String mID;
 		
 		/**
@@ -449,20 +446,17 @@ public final class SubscriptionManager implements PrioRunnable {
 		/**
 		 * The {@link Client} to which this Notification belongs
 		 */
-		@IndexedField
 		private final Client mClient;
 		
 		/**
 		 * The {@link Subscription} to which this Notification belongs
 		 */
-		@IndexedField
 		private final Subscription<? extends EventSource> mSubscription;
 		
 		/**
 		 * The index of this Notification in the queue of its {@link Client}:
 		 * Notifications are supposed to be sent out in proper sequence, therefore we use incremental indices.
 		 */
-		@IndexedField
 		private final long mIndex;
 	
         /**
