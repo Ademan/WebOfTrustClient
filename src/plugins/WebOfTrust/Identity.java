@@ -110,11 +110,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 
 	/** A list of this Identity's custom properties */
 	protected HashMap<String, String> mProperties;
-	
-	/**
-	 * @see Identity#activateProperties()
-	 */
-	private transient boolean mPropertiesActivated;
 
 	/** An {@link UUID} set by {@link EventSource#setVersionID(UUID)}. See its JavaDoc for an
 	 *  explanation of the purpose.<br>
@@ -278,8 +273,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * @throws MalformedURLException if newRequestURI isn't a valid request URI
 	 */
 	protected Identity(WebOfTrustInterface myWoT, FreenetURI newRequestURI, String newNickname, boolean doesPublishTrustList) throws InvalidParameterException, MalformedURLException {
-		initializeTransient(myWoT);
-		
         // Also takes care of setting the edition to 0 - see below for explanation
         final FreenetURI normalizedRequestURI = testAndNormalizeRequestURI(newRequestURI);
         mRequestURIString = normalizedRequestURI.toString();
@@ -332,7 +325,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 */
 	@Override
 	public final String getID() {
-		checkedActivate(1); // String is a db4o primitive type so 1 is enough
 		return mID;
 	}
 
@@ -340,7 +332,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * @return The requestURI ({@link FreenetURI}) to fetch this Identity 
 	 */
 	public final FreenetURI getRequestURI() {
-        checkedActivate(1); // String is a db4o primitive type so 1 is enough
         try {
             return new FreenetURI(mRequestURIString);
         } catch (MalformedURLException e) {
@@ -383,7 +374,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	}
 	
 	public final FetchState getCurrentEditionFetchState() {
-		checkedActivate(1);
 		return mCurrentEditionFetchState;
 	}
 	
@@ -395,7 +385,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * @param fetchState The desired fetch state.
 	 */
 	public final void forceSetCurrentEditionFetchState(final FetchState fetchState) {
-		checkedActivate(1);
 		mCurrentEditionFetchState = fetchState;
 	}
 
@@ -410,12 +399,8 @@ public class Identity extends Persistent implements Cloneable, EventSource {
         // If we did not call checkedActivate(), db4o would not notice and not store the modified
         // mRequestURIString - But checkedActivate() is done by the following getRequestURI()
         // already, so we do not call it again here.
-        /* checkedActivate(1); */
         final FreenetURI requestURI = getRequestURI();
 
-		// checkedActivate(mCurrentEditionFetchState, 1); is not needed, has no members
-		// checkedActivate(mLatestEditionHint, 1); is not needed, long is a db4o primitive type 
-		
         long currentEdition = requestURI.getEdition();
 		
 		if (newEdition < currentEdition) {
@@ -425,7 +410,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 		if (newEdition > currentEdition) {
             // String is a db4o primitive type, and thus automatically deleted. This also applies
             // to the enum and long which we set in the following code.
-            /* checkedDelete(mRequestURIString); */
             mRequestURIString = requestURI.setSuggestedEdition(newEdition).toString();
 			mCurrentEditionFetchState = FetchState.NotFetched;
 			if (newEdition > mLatestEditionHint) {
@@ -445,7 +429,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
         // If we did not call checkedActivate(), db4o would not notice and not store the modified
         // mRequestURIString - But checkedActivate() is done by the following getRequestURI()
         // already, so we do not call it again here.
-        /* checkedActivate(1); */
         final FreenetURI requestURI = getRequestURI();
 		
         final long currentEdition = requestURI.getEdition();
@@ -453,7 +436,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 		if(newEdition != currentEdition) {
             // String is a db4o primitive type, and thus automatically deleted. This also applies
             // to the long which we set in the following code.
-            /* checkedDelete(mRequestURIString); */
             mRequestURIString = requestURI.setSuggestedEdition(newEdition).toString();
 			if (newEdition > mLatestEditionHint) {
 				// Do not call setNewEditionHint() to prevent confusing logging.
@@ -464,7 +446,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	}
 	
 	public final long getLatestEditionHint() {
-		checkedActivate(1); // long is a db4o primitive type so 1 is enough
 		return mLatestEditionHint;
 	}
 	
@@ -477,8 +458,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * @return True, if the given hint was newer than the already stored one. You have to tell the {@link IdentityFetcher} about that then.
 	 */
 	protected final boolean setNewEditionHint(long newLatestEditionHint) {
-		checkedActivate(1); // long is a db4o primitive type so 1 is enough
-		
 		if (newLatestEditionHint > mLatestEditionHint) {
 			mLatestEditionHint = newLatestEditionHint;
 			if(logDEBUG) Logger.debug(this, "Received a new edition hint of " + newLatestEditionHint + " (current: " + mLatestEditionHint + ") for "+ this);
@@ -494,7 +473,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * Instead, use {@link #setNewEditionHint(long)} whenever possible.
 	 */
 	public void forceSetNewEditionHint(long newLatestEditionHint) {
-		checkedActivate(1); // long is a db4o primitive type so 1 is enough
 		mLatestEditionHint = newLatestEditionHint;
 	}
 	
@@ -505,13 +483,11 @@ public class Identity extends Persistent implements Cloneable, EventSource {
         // If we did not call checkedActivate(), db4o would not notice and not store the modified
         // mRequestURIString - But checkedActivate() is done by the following getRequestURI()
         // already, so we do not call it again here.
-        /* checkedActivate(1); */
         FreenetURI requestURI = getRequestURI();
 
         requestURI = requestURI.setSuggestedEdition(Math.max(requestURI.getEdition() - 1, 0));
 
         // String is a db4o primitive type, and thus automatically deleted.
-        /* checkedDelete(mRequestURIString); */
         mRequestURIString = requestURI.toString();
 
 		// TODO: I decided that we should not decrease the edition hint here. Think about that again.
@@ -525,9 +501,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * current trust list. This is necessary because we do not create the trusted identities of someone if he has a negative score. 
 	 */
 	protected void markForRefetch() {
-		checkedActivate(1);
-		// checkedActivate(mCurrentEditionFetchState, 1); not needed, it has no members
-		
 		if (mCurrentEditionFetchState == FetchState.Fetched) {
 			mCurrentEditionFetchState = FetchState.NotFetched;
 		} else {
@@ -546,7 +519,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * Returns the date when we last fetched an {@link IdentityFile} for this Identity.<br>
 	 * If the Identity was never fetched yet, this will be <code>new Date(0)</code>. */
 	public final Date getLastFetchedDate() {
-		checkedActivate(1); // Date is a db4o primitive type so 1 is enough
 		return (Date)mLastFetchedDate.clone();	// Clone it because date is mutable
 	}
 
@@ -554,7 +526,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * @return The date of this Identity's last modification.
 	 */
 	public final Date getLastChangeDate() {
-		checkedActivate(1);  // Date is a db4o primitive type so 1 is enough
 		return (Date)mLastChangedDate.clone();	// Clone it because date is mutable
 	}
 	
@@ -572,11 +543,9 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * Must not be called before setEdition!
 	 */
 	protected final void onFetched(Date fetchDate) {
-		checkedActivate(1);
 		
 		mCurrentEditionFetchState = FetchState.Fetched;
 		
-		// checkedDelete(mLastFetchedDate); /* Not stored because db4o considers it as a primitive */
 		mLastFetchedDate = (Date)fetchDate.clone();	// Clone it because date is mutable
 		
 		updated();
@@ -586,11 +555,9 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * Has to be called when the identity was fetched and parsing failed. Must not be called before setEdition!
 	 */
 	protected final void onParsingFailed() {
-		checkedActivate(1);
 		
 		mCurrentEditionFetchState = FetchState.ParsingFailed;
 		
-		// checkedDelete(mLastFetchedDate); /* Not stored because db4o considers it as a primitive */
 		mLastFetchedDate = CurrentTimeUTC.get();
 		
 		updated();
@@ -600,7 +567,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * @return The Identity's nickName
 	 */
 	public final String getNickname() {
-		checkedActivate(1); // String is a db4o primitive type so 1 is enough
 		return mNickname;
 	}
 	
@@ -671,8 +637,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 		
 		validateNickname(newNickname);
 		
-		checkedActivate(1); // String is a db4o primitive type so 1 is enough
-		
 		if (mNickname != null && !mNickname.equals(newNickname)) {
 			throw new InvalidParameterException("Changing the nickname of an identity is not allowed.");
 		}
@@ -687,7 +651,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * @return Whether this Identity publishes its trustList or not.
 	 */
 	public final boolean doesPublishTrustList() {
-		checkedActivate(1); // boolean is a db4o primitive type so 1 is enough
 		return mDoesPublishTrustList;
 	}
 
@@ -695,8 +658,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * Sets if this Identity publishes its trust list or not. 
 	 */
 	public final void setPublishTrustList(boolean doesPublishTrustList) {
-		checkedActivate(1); // boolean is a db4o primitive type so 1 is enough
-		
 		if (mDoesPublishTrustList == doesPublishTrustList) {
 			return;
 		}
@@ -712,8 +673,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * @return Whether this Identity has that context or not
 	 */
 	public final boolean hasContext(String context) {
-		checkedActivate(1);
-		checkedActivate(mContexts, 2);
 		return mContexts.contains(context.trim());
 	}
 
@@ -726,8 +685,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	public final ArrayList<String> getContexts() {
 		/* TODO: If this is used often - which it probably is, we might verify that no code corrupts the HashMap and return the original one
 		 * instead of a copy */
-		checkedActivate(1);
-		checkedActivate(mContexts, 2);
 		return (ArrayList<String>)mContexts.clone();
 	}
 
@@ -759,9 +716,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 			throw new InvalidParameterException("Context names must be latin letters and numbers only");
 		}
 		
-		checkedActivate(1);
-		checkedActivate(mContexts, 2);
-		
 		if (!mContexts.contains(newContext)) {
 			if (mContexts.size() >= MAX_CONTEXT_AMOUNT) {
 				throw new InvalidParameterException("An identity may not have more than " + MAX_CONTEXT_AMOUNT + " contexts.");
@@ -780,9 +734,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * a re-insert even if nothing was changed.
 	 */
 	protected final void setContexts(List<String> newContexts) {
-		checkedActivate(1);
-		checkedActivate(mContexts, 2);
-		
 		mContexts.clear();
 		
 		for (String context : newContexts) {
@@ -805,31 +756,10 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	public final void removeContext(String context) throws InvalidParameterException {
 		context = context.trim();
 		
-		checkedActivate(1);
-		checkedActivate(mContexts, 2);
-		
 		if (mContexts.contains(context)) {
 			mContexts.remove(context);
 			updated();
 		}
-	}
-	
-	private synchronized final void activateProperties() {
-		// We must not deactivate mProperties if it was already modified by a setter so we need this guard
-		if(mPropertiesActivated)
-			return;
-		
-		// TODO: As soon as the db4o bug with hashmaps is fixed, remove this workaround function & replace with:
-		// checkedActivate(1);
-		// checkedActivate(mProperties, 3);
-		checkedActivate(1);
-		
-		if(mDB.isStored(mProperties)) {
-			mDB.deactivate(mProperties);
-			checkedActivate(mProperties, 3);
-		}
-		
-		mPropertiesActivated = true;
 	}
 
 	/**
@@ -841,8 +771,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 */
 	public final String getProperty(String key) throws InvalidParameterException {
 		key = key.trim();
-		
-		activateProperties();
 		
 		if (!mProperties.containsKey(key)) {
 			throw new InvalidParameterException("The property '" + key +"' isn't set on this identity.");
@@ -858,7 +786,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 */
 	@SuppressWarnings("unchecked")
 	public final HashMap<String, String> getProperties() {
-		activateProperties();
 		/* TODO: If this is used often, we might verify that no code corrupts the HashMap and return the original one instead of a copy */
 		return (HashMap<String, String>)mProperties.clone();
 	}
@@ -909,8 +836,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 			throw new InvalidParameterException("Property values must not be longer than " + MAX_PROPERTY_VALUE_LENGTH + " characters");
 		}
 		
-		activateProperties();
-		
 		String oldValue = mProperties.get(key);
 		if (oldValue == null && mProperties.size() >= MAX_PROPERTY_AMOUNT) {
 			throw new InvalidParameterException("An identity may not have more than " + MAX_PROPERTY_AMOUNT + " properties.");
@@ -930,9 +855,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * a re-insert even if nothing was changed.
 	 */
 	protected final void setProperties(HashMap<String, String> newProperties) {
-		activateProperties();
-		if(mDB.isStored(mProperties)) // Prevent logging about deletion of non-stored object in clone()
-			checkedDelete(mProperties);
 		mProperties = new HashMap<String, String>(newProperties.size() * 2);
 		
 		for (Entry<String, String> property : newProperties.entrySet()) {
@@ -950,8 +872,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * @param key Name of the custom property.
 	 */
 	public final void removeProperty(String key) throws InvalidParameterException {
-		activateProperties();
-		
 		key = key.trim();		
 		if (mProperties.remove(key) != null) {
 			updated();
@@ -964,15 +884,12 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * Updated OwnIdentities will be reinserted by the IdentityInserter automatically.
 	 */
 	public final void updated() {
-		checkedActivate(1); // Date is a db4o primitive type so 1 is enough
-		// checkedDelete(mLastChangedDate); /* Not stored because db4o considers it as a primitive */
 		mLastChangedDate = CurrentTimeUTC.get();
 	}
 
 	/** @return A String containing everything which {@link #equals(Object)} would compare. */
 	@Override
 	public String toString() {
-		activateFully(); 
 		return "[Identity: " + super.toString()
 		     + "; mID: " + mID
 		     + "; mRequestURIString: " + mRequestURIString
@@ -1063,17 +980,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	}
 	
 	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	protected void activateFully() {
-		// 4 is the maximal depth of all getter functions. You have to adjust this when introducing new member variables.
-		checkedActivate(4);
-		// Workaround for db4o bug
-		activateProperties();
-	}
-	
-	/**
 	 * Clones this identity. Does <b>not</b> clone the {@link Date} attributes, they are initialized to the current time!
 	 */
 	@Override
@@ -1081,7 +987,6 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 		try {
 			Identity clone = new Identity(mWebOfTrust, getRequestURI(), getNickname(), doesPublishTrustList());
 			
-			activateFully(); // For performance only
 			clone.setEdition(getEdition());
 			clone.setNewEditionHint(getLatestEditionHint());
 			clone.setCreationDate(getCreationDate());
@@ -1103,208 +1008,20 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 			throw new IllegalStateException(e); 
 		}
 	}
-	
 
-	
-	/**
-	 * Stores this identity in the database without committing the transaction
-	 * You must synchronize on the WoT, on the identity and then on the database when using this function!
-	 */
-	@Override
-	protected void storeWithoutCommit() {
-		try {
-			activateFully();
-
-			// checkedStore(mID); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-
-            assert(mRequestURI == null)
-                : "upgradeDatabaseFormatVersion5WithoutCommit() should delete mRequestURI";
-
-            /* String is a db4o primitive type, and thus automatically stored. */
-            // checkedStore(mRequestURIString);
-
-			// checkedStore(mFirstFetchedDate); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-			// checkedStore(mLastFetchedDate); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-			// checkedStore(mLastChangedDate); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-			// checkedStore(mNickname); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-			// checkedStore(mDoesPublishTrustList); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-			checkedStore(mProperties);
-			checkedStore(mContexts);
-			checkedStore();
-		}
-		catch(final RuntimeException e) {
-			checkedRollbackAndThrow(e);
-		}
-	}
-
-    /** @see WebOfTrust#upgradeDatabaseFormatVersion5 */
-    protected void upgradeDatabaseFormatVersion12345WithoutCommit() {
-        checkedActivate(1);
-        
-        if(mRequestURIString != null) {
-            // This object has had its mRequestURI migrated to mRequestURIString already.
-            // Might happen during very old database format version upgrade codepaths which
-            // create fresh Identity objects - newly constructed objects will not need migration.
-            assert(mRequestURI == null);
-            return;
-        }
-        
-        assert(mRequestURI != null);
-        checkedActivate(mRequestURI, 2);
-        mRequestURIString = mRequestURI.toString();
-
-        // A FreenetURI currently only contains db4o primitive types (String, arrays, etc.) and thus
-        // we can delete it having to delete its member variables explicitly.
-        mDB.delete(mRequestURI);
-        mRequestURI = null;
-
-        // OwnIdentity.upgradeDatabaseFormatVersion12345WithoutCommit() needs this, don't remove it
-        storeWithoutCommit();
-    }
-
-	/**
-	 * Locks the WoT and the database and stores the identity.
-	 */
-	protected final void storeAndCommit() {
-		synchronized(mWebOfTrust) {
-		synchronized(Persistent.transactionLock(mDB)) {
-			try {
-				storeWithoutCommit();
-				checkedCommit(this);
-			}
-			catch(RuntimeException e) {
-				checkedRollbackAndThrow(e);
-			}
-		}
-		}
-	}
-	
-	/**
-	 * You have to lock the WoT and the IntroductionPuzzleStore before calling this function.
-	 * @param identity
-	 */
-	@Override
-	protected void deleteWithoutCommit() {
-		try {
-			activateFully();
-			
-			// checkedDelete(mID); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-
-            assert(mRequestURI == null)
-                : "upgradeDatabaseFormatVersion5WithoutCommit() should delete mRequestURI";
-            // checkedDelete(mRequestURI);
-
-            /* String is a db4o primitive type, and thus automatically deleted. */
-            // checkedDelete(mRequestURIString);
-
-			checkedDelete(mCurrentEditionFetchState); // TODO: Is this still necessary?
-			// checkedDelete(mLastFetchedDate); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-			// checkedDelete(mLastChangedDate); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-			// checkedDelete(mNickname); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-			// checkedDelete(mDoesPublishTrustList); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-			checkedDelete(mProperties);
-			checkedDelete(mContexts);
-			checkedDelete();
-		}
-		catch(RuntimeException e) {
-			checkedRollbackAndThrow(e);
-		}
-	}
-
-	@Override
-	public void startupDatabaseIntegrityTest() {
-		activateFully();
-
-		if(mID == null)
-			throw new NullPointerException("mID==null");
-
-        if(mRequestURI != null) {
-            throw new IllegalStateException(
-                "upgradeDatabaseFormatVersion5WithoutCommit() should delete mRequestURI");
-        }
-
-		if(mRequestURIString == null)
-			throw new NullPointerException("mRequestURIString==null");
-		
-        final FreenetURI requestURI = getRequestURI();
-		
-		try {
-            if(!testAndNormalizeRequestURI(requestURI).equals(requestURI.setSuggestedEdition(0)))
-                throw new IllegalStateException("Request URI is not normalized: " + requestURI);
-		} catch (MalformedURLException e) {
-            throw new IllegalStateException("Request URI is invalid: " + e);
-		}
-		
-        if(!mID.equals(IdentityID.constructAndValidateFromURI(requestURI).toString()))
-            throw new IllegalStateException("ID does not match request URI!");
-		
-		IdentityID.constructAndValidateFromString(mID); // Throws if invalid
-		
-		if(mCurrentEditionFetchState == null)
-			throw new NullPointerException("mCurrentEditionFetchState==null");
-		
-        if(mLatestEditionHint < 0 || mLatestEditionHint < requestURI.getEdition()) {
-            throw new IllegalStateException("Invalid edition hint: " + mLatestEditionHint
-                                          + "; current edition: " + requestURI.getEdition());
-        }
-
-		if(mLastFetchedDate == null)
-			throw new NullPointerException("mLastFetchedDate==null");
-		
-		if(mLastFetchedDate.after(CurrentTimeUTC.get()))
-			throw new IllegalStateException("mLastFetchedDate is in the future: " + mLastFetchedDate);
-		
-		if(mLastChangedDate == null)
-			throw new NullPointerException("mLastChangedDate==null");
-		
-		if(mLastChangedDate.before(mCreationDate))
-			throw new IllegalStateException("mLastChangedDate is before mCreationDate!");
-		
-		if(mLastChangedDate.before(mLastFetchedDate))
-			throw new IllegalStateException("mLastChangedDate is before mLastFetchedDate!");
-		
-		if(mLastChangedDate.after(CurrentTimeUTC.get()))
-			throw new IllegalStateException("mLastChangedDate is in the future: " + mLastChangedDate);
-		
-		if(mNickname != null) {
-			try {
-				validateNickname(mNickname);
-			} catch(InvalidParameterException e) {
-				throw new IllegalStateException(e);
-			}
-		}
-		
-		if(mContexts == null)
-			throw new NullPointerException("mContexts==null");
-		
-		if(mProperties == null)
-			throw new NullPointerException("mProperties==null");
-		
-		if(mContexts.size() > MAX_CONTEXT_AMOUNT)
-			throw new IllegalStateException("Too many contexts: " + mContexts.size());
-		
-		if(mProperties.size() > MAX_PROPERTY_AMOUNT)
-			throw new IllegalStateException("Too many properties: " + mProperties.size());
-			
-		// TODO: Verify context/property names/values 
-	}
-	
 	/** @see Persistent#serialize() */
 	private void writeObject(ObjectOutputStream stream) throws IOException {
-		activateFully();
 		stream.defaultWriteObject();
 	}
 
 	/** {@inheritDoc} */
     @Override public void setVersionID(UUID versionID) { 
-        checkedActivate(1);
         // No need to delete the old value from db4o: Its a String, and thus a native db4o value.
         mVersionID = versionID.toString();
     }
 
     /** {@inheritDoc} */
     @Override public UUID getVersionID() {
-        checkedActivate(1);
         // FIXME: Validate whether this yields proper results using an event-notifications FCP dump
         return mVersionID != null ? UUID.fromString(mVersionID) : UUID.randomUUID();
     }

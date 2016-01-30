@@ -158,8 +158,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 * @param myCapacity How much point the trusted Identity can add to its trustees score.
 	 */
 	public Score(WebOfTrustInterface myWoT, OwnIdentity myTruster, Identity myTrustee, int myValue, int myRank, int myCapacity) {
-		initializeTransient(myWoT);
-		
 		if(myTruster == null)
 			throw new NullPointerException();
 			
@@ -186,7 +184,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	/** @return A String containing everything which {@link #equals(Object)} would compare. */
 	@Override
 	public String toString() {
-	    activateFully();
 		return "[Score: " + super.toString()
 		     + "; mID: " + mID
 		     + "; mValue: " + mValue
@@ -199,8 +196,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 * @return in which OwnIdentity's trust tree this score is
 	 */
 	public OwnIdentity getTruster() {
-		checkedActivate(1);
-		mTruster.initializeTransient(mWebOfTrust);
 		return mTruster;
 	}
 
@@ -208,8 +203,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 * @return Identity that has this Score
 	 */
 	public Identity getTrustee() {
-		checkedActivate(1);
-		mTrustee.initializeTransient(mWebOfTrust);
 		return mTrustee;
 	}
 	
@@ -218,7 +211,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 */
 	@Override
 	public String getID() {
-		checkedActivate(1); // String is a db4o primitive type so 1 is enough
 		return mID;
 	}
 	
@@ -227,7 +219,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 */
 	@Deprecated
 	protected void generateID() {
-		checkedActivate(1);
 		if(mID != null)
 			throw new RuntimeException("ID is already set for " + this);
 		mID = new ScoreID(getTruster(), getTrustee()).toString();
@@ -238,7 +229,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 */
 	/* XXX: Rename to getValue */
 	public synchronized int getScore() {
-		checkedActivate(1); // int is a db4o primitive type so 1 is enough
 		return mValue;
 	}
 
@@ -246,8 +236,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 * Sets the numeric value of this Score.
 	 */
 	protected synchronized void setValue(int newValue) {
-		checkedActivate(1); // int/Date is a db4o primitive type so 1 is enough
-		
 		if(mValue == newValue)
 			return;
 		
@@ -260,7 +248,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 * @see WebOfTrust#computeRankFromScratch()
 	 */
 	public synchronized int getRank() {
-		checkedActivate(1); // int is a db4o primitive type so 1 is enough
 		return mRank;
 	}
 
@@ -270,8 +257,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	protected synchronized void setRank(int newRank) {		
 		if(newRank < -1)
 			throw new IllegalArgumentException("Illegal rank.");
-		
-		checkedActivate(1); // int is a db4o primitive type so 1 is enough
 		
 		if(newRank == mRank)
 			return;
@@ -284,7 +269,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 * @return how much points the trusted Identity can add to its trustees score
 	 */
 	public synchronized int getCapacity() {
-		checkedActivate(1); // int is a db4o primitive type so 1 is enough
 		return mCapacity;
 	}
 
@@ -294,8 +278,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	protected synchronized void setCapacity(int newCapacity) {
 		if(newCapacity < 0)
 			throw new IllegalArgumentException("Negative capacities are not allowed.");
-		
-		checkedActivate(1); // int/Date is a db4o primitive type so 1 is enough
 		
 		if(newCapacity == mCapacity)
 			return;
@@ -309,7 +291,6 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 * or capacity of a score changes then its date of creation stays constant.
 	 */
 	public synchronized Date getDateOfCreation() {
-		checkedActivate(1); // Date is a db4o primitive type so 1 is enough
 		return (Date)mCreationDate.clone();	// Clone it because date is mutable
 	}
 	
@@ -317,32 +298,7 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 * Gets the {@link Date} when the value, capacity or rank of this score was last changed.
 	 */
 	public synchronized Date getDateOfLastChange() {
-		checkedActivate(1); // Date is a db4o primitive type so 1 is enough
 		return (Date)mLastChangedDate.clone();	// Clone it because date is mutable
-	}
-	
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	protected void activateFully() {
-		// 1 is the maximal depth of all getter functions. You have to adjust this when introducing new member variables.
-		checkedActivate(1);
-		mTruster.initializeTransient(mWebOfTrust);
-		mTrustee.initializeTransient(mWebOfTrust);
-	}
-	
-	@Override
-	protected void storeWithoutCommit() {
-		try {
-			activateFully();
-			throwIfNotStored(mTruster);
-			throwIfNotStored(mTrustee);
-			checkedStore();
-		}
-		catch(final RuntimeException e) {
-			checkedRollbackAndThrow(e);
-		}
 	}
 	
 	/**
@@ -388,62 +344,25 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 
 	@Override
 	public Score clone() {
-		activateFully();
 		final Score clone = new Score(mWebOfTrust, getTruster().clone(), getTrustee().clone(), getScore(), getRank(), getCapacity());
 		clone.setCreationDate(getCreationDate());
 		clone.mLastChangedDate = (Date)mLastChangedDate.clone();	// Clone it because date is mutable
 		return clone;
 	}
-
-	@Override
-	public void startupDatabaseIntegrityTest() throws Exception {
-		activateFully();
-		
-		if(mTruster == null)
-			throw new NullPointerException("mTruster==null");
-		
-		if(mTrustee == null)
-			throw new NullPointerException("mTrustee==null");
-		
-		if(mID == null)
-			throw new NullPointerException("mID==null");
-		
-		ScoreID.constructAndValidate(this, mID); // Throws if invalid
-		
-		if(mRank < -1)
-			throw new IllegalStateException("Invalid rank: " + mRank);
-	
-		if(mCapacity < 0)
-			throw new IllegalStateException("Negative capacity: " + mCapacity);
-		
-		if(mLastChangedDate == null)
-			throw new NullPointerException("mLastChangedDate==null");
-		
-		if(mLastChangedDate.before(mCreationDate))
-			throw new IllegalStateException("mLastChangedDate is before mCreationDate.");
-		
-		if(mLastChangedDate.after(CurrentTimeUTC.get()))
-			throw new IllegalStateException("mLastChangedDate is in the future: " + mLastChangedDate);
-	}
 	
 	/** @see Persistent#serialize() */
 	private void writeObject(ObjectOutputStream stream) throws IOException {
-		activateFully();
-		mTruster.activateFully();
-		mTrustee.activateFully();
 		stream.defaultWriteObject();
 	}
 
     /** {@inheritDoc} */
     @Override public void setVersionID(UUID versionID) { 
-        checkedActivate(1);
         // No need to delete the old value from db4o: Its a String, and thus a native db4o value.
         mVersionID = versionID.toString();
     }
 
     /** {@inheritDoc} */
     @Override public UUID getVersionID() {
-        checkedActivate(1);
         // FIXME: Validate whether this yields proper results using an event-notifications FCP dump
         return mVersionID != null ? UUID.fromString(mVersionID) : UUID.randomUUID();
     }

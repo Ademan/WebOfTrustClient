@@ -139,7 +139,6 @@ public final class OwnIdentity extends Identity implements Cloneable, Serializab
 	 * @return This OwnIdentity's insertURI
 	 */
 	public final FreenetURI getInsertURI() {
-        checkedActivate(1); // String is a db4o primitive type so 1 is enough
         try {
             return new FreenetURI(mInsertURIString);
         } catch (MalformedURLException e) {
@@ -173,7 +172,6 @@ public final class OwnIdentity extends Identity implements Cloneable, Serializab
 	protected final void setEdition(long edition) throws InvalidParameterException {
 		super.setEdition(edition);
 		
-		checkedActivate(1);
         // Enums are a db4o primitive type, and thus automatically deleted. This also applies
         // to the String mInsertURIString which we set in the following code.
         /* checkedDelete(mCurrentEditionFetchState); */
@@ -234,7 +232,6 @@ public final class OwnIdentity extends Identity implements Cloneable, Serializab
 	 */
 	protected final void restoreEdition(long edition, Date fetchedDate) throws InvalidParameterException {
 		setEdition(edition);
-		checkedActivate(1);
 		mCurrentEditionFetchState = FetchState.NotFetched;
 		
 		// checkedDelete(mLastFetchedDate); /* Not stored because db4o considers it as a primitive */
@@ -251,7 +248,6 @@ public final class OwnIdentity extends Identity implements Cloneable, Serializab
 	 * Get the Date of last insertion of this OwnIdentity, in UTC, null if it was not inserted yet.
 	 */
 	public final Date getLastInsertDate() {
-		checkedActivate(1); // Date is a db4o primitive type so 1 is enough
 		return (Date)mLastInsertDate.clone();	// Clone it because date is mutable
 	}
 	
@@ -259,7 +255,6 @@ public final class OwnIdentity extends Identity implements Cloneable, Serializab
 	 * Sets the last insertion date of this OwnIdentity to current time in UTC.
 	 */
 	protected final void updateLastInsertDate() {
-		checkedActivate(1); // Date is a db4o primitive type so 1 is enough
 		// checkedDelete(mLastInsertDate); /* Not stored because db4o considers it as a primitive */
 		mLastInsertDate = CurrentTimeUTC.get();
 	}
@@ -292,19 +287,10 @@ public final class OwnIdentity extends Identity implements Cloneable, Serializab
 	/** @return A String containing everything which {@link #equals(Object)} would compare. */
 	@Override
 	public final String toString() {
-        activateFully(); 
         return "[OwnIdentity: " + super.toString()
              + "; mInsertURIString: " + mInsertURIString
              + "; mInsertURI: " + mInsertURI
              + "]";
-	}
-	
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	protected void activateFully() {
-		super.activateFully();
 	}
 	
 	/**
@@ -314,8 +300,6 @@ public final class OwnIdentity extends Identity implements Cloneable, Serializab
 	public final OwnIdentity clone() {
 		try {
 			OwnIdentity clone = new OwnIdentity(mWebOfTrust, getInsertURI(), getNickname(), doesPublishTrustList());
-			
-			activateFully(); // For performance only
 			
 			clone.setEdition(getEdition());
 			clone.setNewEditionHint(getLatestEditionHint());
@@ -339,121 +323,8 @@ public final class OwnIdentity extends Identity implements Cloneable, Serializab
 		}
 	}
 	
-	/**
-	 * Stores this identity in the database without committing the transaction
-	 * You must synchronize on the WoT, on the identity and then on the database when using this function!
-	 */
-	@Override
-	protected final void storeWithoutCommit() {
-		try {
-			activateFully();
-			
-            assert(mInsertURI == null)
-                : "upgradeDatabaseFormatVersion5WithoutCommit() should delete mInsertURI";
-
-            /* String is a db4o primitive type, and thus automatically stored. */
-            // checkedStore(mInsertURIString);
-
-			// checkedStore(mLastInsertDate); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-		}
-		catch(RuntimeException e) {
-			checkedRollbackAndThrow(e);
-		}
-		
-		super.storeWithoutCommit(); // Not in the try{} so we don't do checkedRollbackAndThrow twice
-	}
-
-    /** @see WebOfTrust#upgradeDatabaseFormatVersion5 */
-    @Override protected void upgradeDatabaseFormatVersion12345WithoutCommit() {
-        checkedActivate(1);
-        
-        if(mInsertURIString != null) {
-            // This object has had its mInsertURI migrated to mInsertURIString already.
-            // Might happen during very old database format version upgrade codepaths which
-            // create fresh OwnIdentity objects - newly constructed objects will not need migration.
-            assert(mInsertURI == null);
-            return;
-        }
-        
-        assert(mInsertURI != null);
-        checkedActivate(mInsertURI, 2);
-        mInsertURIString = mInsertURI.toString();
-
-        // A FreenetURI currently only contains db4o primitive types (String, arrays, etc.) and thus
-        // we can delete it having to delete its member variables explicitly.
-        mDB.delete(mInsertURI);
-        mInsertURI = null;
-        
-        // Do this after we've migrated mInsertURI because it will storeWithoutCommit() and
-        // storeWithoutCommit() contains an assert(mInsertURI == null)
-        super.upgradeDatabaseFormatVersion12345WithoutCommit();
-        
-        // Done by the previous call, not needed.
-        /* storeWithoutCommit(); */
-    }
-
-	@Override
-	protected final void deleteWithoutCommit() {
-		try {
-			activateFully();
-
-            assert(mInsertURI == null)
-                : "upgradeDatabaseFormatVersion5WithoutCommit() should delete mInsertURI";
-            // checkedDelete(mInsertURI);
-
-            /* String is a db4o primitive type, and thus automatically deleted. */
-            // checkedDelete(mInsertURIString);
-
-			// checkedDelete(mLastInsertDate); /* Not stored because db4o considers it as a primitive and automatically stores it. */
-		}
-		catch(RuntimeException e) {
-			checkedRollbackAndThrow(e);
-		}
-		
-		super.deleteWithoutCommit(); // Not in the try{} so we don't do checkedRollbackAndThrow twice
-	}
-	
-	@Override
-	public void startupDatabaseIntegrityTest() {
-		activateFully();
-		super.startupDatabaseIntegrityTest();
-		
-        if(mInsertURI != null) {
-            throw new IllegalStateException(
-                "upgradeDatabaseFormatVersion5WithoutCommit() should delete mInsertURI");
-        }
-
-        if(mInsertURIString == null)
-            throw new NullPointerException("mInsertURIString==null");
-
-        final FreenetURI insertURI = getInsertURI();
-		
-		try {
-            final FreenetURI normalizedInsertURI
-                = testAndNormalizeInsertURI(insertURI).setSuggestedEdition(insertURI.getEdition());
-            if(!normalizedInsertURI.equals(insertURI))
-                throw new IllegalStateException("Insert URI is not normalized: " + insertURI);
-		} catch (MalformedURLException e) {
-            throw new IllegalStateException("Insert URI is invalid: " + e);
-		}
-		
-		try {
-            if(!insertURI.deriveRequestURIFromInsertURI().equals(getRequestURI()))
-				throw new IllegalStateException("Insert and request URI do not fit together!");
-		} catch (MalformedURLException e) {
-            throw new IllegalStateException("Insert URI is not an insert URI!");
-		}
-		
-		if(mLastInsertDate == null)
-			throw new NullPointerException("mLastInsertDate==null");
-		
-		if(mLastInsertDate.after(CurrentTimeUTC.get()))
-			throw new IllegalStateException("mLastInsertDate is in the future: " + mLastInsertDate);
-	}
-	
 	/** @see Persistent#serialize() */
 	private void writeObject(ObjectOutputStream stream) throws IOException {
-		activateFully();
 		stream.defaultWriteObject();
 	}
 

@@ -211,8 +211,6 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 	 * @throws InvalidParameterException if the trust value is not between -100 and +100
 	 */
 	public Trust(WebOfTrustInterface myWoT, Identity truster, Identity trustee, byte value, String comment) throws InvalidParameterException {
-		initializeTransient(myWoT);
-		
 		if(truster == null)
 			throw new NullPointerException();
 		
@@ -241,7 +239,6 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
     /** @return A String containing everything which {@link #equals(Object)} would compare. */
 	@Override
 	public String toString() {
-	    activateFully();
 		return "[Trust: " + super.toString()
 		     + "; mID: " + mID
 		     + "; mValue:" + mValue
@@ -252,15 +249,11 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 
 	/** @return The Identity that gives this trust. */
 	public Identity getTruster() {
-		checkedActivate(1);
-		mTruster.initializeTransient(mWebOfTrust);
 		return mTruster;
 	}
 
 	/** @return The Identity that receives this trust. */
 	public Identity getTrustee() {
-		checkedActivate(1);
-		mTrustee.initializeTransient(mWebOfTrust);
 		return mTrustee;
 	}
 	
@@ -269,7 +262,6 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 	 */
 	@Override
 	public String getID() {
-		checkedActivate(1); // String is a db4o primitive type so 1 is enough
 		return mID;
 	}
 	
@@ -278,7 +270,6 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 	 */
 	@Deprecated
 	protected void generateID() {
-		checkedActivate(1);
 		if(mID != null)
 			throw new RuntimeException("ID is already set for " + this);
 		mID = new TrustID(getTruster(), getTrustee()).toString();
@@ -286,7 +277,6 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 
 	/** @return value Numeric value of this trust relationship. The allowed range is -100 to +100, including both limits. 0 counts as positive. */
 	public synchronized byte getValue() {
-		checkedActivate(1); // byte is a db4o primitive type so 1 is enough
 		return mValue;
 	}
 
@@ -299,8 +289,6 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 		if(newValue < -100 || newValue > 100) 
 			throw new InvalidParameterException("Invalid trust value ("+ newValue +"). Trust values must be in range of -100 to +100.");
 
-		checkedActivate(1); // byte is a db4o primitive type so 1 is enough
-		
 		if(mValue != newValue) {
 			mValue = newValue;
 			mLastChangedDate = CurrentTimeUTC.get();
@@ -309,7 +297,6 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 
 	/** @return The comment associated to this Trust relationship. */
 	public synchronized String getComment() {
-		checkedActivate(1); // String is a db4o primitive type so 1 is enough
 		return mComment;
 	}
 
@@ -330,8 +317,6 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 			|| !StringValidityChecker.containsNoInvalidFormatting(newComment))
 			throw new InvalidParameterException("Comment contains illegal characters.");
 
-		checkedActivate(1); // String is a db4o primitive type so 1 is enough
-		
 		if(!mComment.equals(newComment)) {
 			mComment = newComment;
 			mLastChangedDate = CurrentTimeUTC.get();
@@ -339,12 +324,10 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 	}
 	
 	public synchronized Date getDateOfCreation() {
-		checkedActivate(1); // Date is a db4o primitive type so 1 is enough
 		return (Date)mCreationDate.clone();	// Clone it because date is mutable
 	}
 	
 	public synchronized Date getDateOfLastChange() {
-		checkedActivate(1); // Date is a db4o primitive type so 1 is enough
 		return (Date)mLastChangedDate.clone();	// Clone it because date is mutable
 	}
 	
@@ -353,12 +336,10 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 	 * For an explanation for what this is needed please read the description of {@link #mTrusterTrustListEdition}.
 	 */
 	protected synchronized void trusterEditionUpdated() {
-		checkedActivate(1); // long is a db4o primitive type so 1 is enough
 		mTrusterTrustListEdition = getTruster().getEdition();
 	}
 	
 	public synchronized long getTrusterEdition() {
-		checkedActivate(1); // long is a db4o primitive type so 1 is enough
 		return mTrusterTrustListEdition;
 	}
 	
@@ -368,32 +349,7 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 	 * Use {@link #trusterEditionUpdated()} instead.
 	 */
 	public void forceSetTrusterEdition(final long trusterEdition) {
-		checkedActivate(1);
 		mTrusterTrustListEdition = trusterEdition;
-	}
-	
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	protected void activateFully() {
-		// 1 is the maximal depth of all getter functions. You have to adjust this when introducing new member variables.
-		checkedActivate(1);
-		mTruster.initializeTransient(mWebOfTrust);
-		mTrustee.initializeTransient(mWebOfTrust);
-	}
-	
-	@Override
-	protected void storeWithoutCommit() {
-		try {		
-			activateFully();
-			throwIfNotStored(mTruster);
-			throwIfNotStored(mTrustee);
-			checkedStore();
-		}
-		catch(final RuntimeException e) {
-			checkedRollbackAndThrow(e);
-		}
 	}
 
 	/**
@@ -440,7 +396,6 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 	@Override
 	public Trust clone() {
 		try {
-			activateFully();
 			Trust clone = new Trust(mWebOfTrust, getTruster().clone(), getTrustee().clone(), getValue(), getComment());
 			clone.setCreationDate(getCreationDate());
 			clone.mLastChangedDate = (Date)mLastChangedDate.clone();	// Clone it because date is mutable
@@ -450,63 +405,20 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 			throw new RuntimeException(e);
 		}
 	}
-
-	@Override
-	public void startupDatabaseIntegrityTest() throws Exception {
-		activateFully();
-		
-		if(mTruster == null)
-			throw new NullPointerException("mTruster==null");
-		
-		if(mTrustee == null)
-			throw new NullPointerException("mTrustee==null");
-		
-		if(mID == null)
-			throw new NullPointerException("mID==null");
-		
-		TrustID.constructAndValidate(this, mID); // Throws if invalid
-		
-		if(mValue < -100 || mValue > 100)
-			throw new IllegalStateException("Invalid value: " + mValue);
-		
-		if(mComment == null)
-			throw new NullPointerException("mComment==null");
-		
-		if(mComment.length() > MAX_TRUST_COMMENT_LENGTH)
-			throw new IllegalStateException("Comment is too long: " + mComment.length());
-		
-		if(mLastChangedDate == null)
-			throw new IllegalStateException("mLastChangedDate==null");
-		
-		if(mLastChangedDate.before(mCreationDate))
-			throw new IllegalStateException("mLastChangedDate is before mCreationDate");
-		
-		if(mLastChangedDate.after(CurrentTimeUTC.get()))
-			throw new IllegalStateException("mLastChangedDate is in the future");
-		
-		if(mTrusterTrustListEdition != getTruster().getEdition() && getTruster().getCurrentEditionFetchState() == Identity.FetchState.Fetched
-				&& !(getTruster() instanceof OwnIdentity)) // We do not update mTrusterTrustListEdition for OwnIdentities, they do not need it.
-			throw new IllegalStateException("mTrusterTrustListEdition is invalid: " + mTrusterTrustListEdition);
-	}
 	
 	/** @see Persistent#serialize() */
 	private void writeObject(ObjectOutputStream stream) throws IOException {
-		activateFully();
-		mTruster.activateFully();
-		mTrustee.activateFully();
 		stream.defaultWriteObject();
 	}
 
     /** {@inheritDoc} */
     @Override public void setVersionID(UUID versionID) { 
-        checkedActivate(1);
         // No need to delete the old value from db4o: Its a String, and thus a native db4o value.
         mVersionID = versionID.toString();
     }
 
     /** {@inheritDoc} */
     @Override public UUID getVersionID() {
-        checkedActivate(1);
         // FIXME: Validate whether this yields proper results using an event-notifications FCP dump
         return mVersionID != null ? UUID.fromString(mVersionID) : UUID.randomUUID();
     }
