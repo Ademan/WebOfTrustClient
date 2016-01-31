@@ -51,11 +51,4 @@ public abstract class AbstractFullNodeTest
     /** Needed for calling {@link NodeStarter#globalTestInit(File, boolean, LogLevel, String,
      *  boolean, RandomSource) only once per VM as it requires that. */
     private static boolean sGlobalTestInitDone = false;
-    
-    protected WebOfTrustInterface mWebOfTrust;
-
-    @Override
-    protected final WebOfTrustInterface getWebOfTrust() {
-        return mWebOfTrust;
-    }
 }

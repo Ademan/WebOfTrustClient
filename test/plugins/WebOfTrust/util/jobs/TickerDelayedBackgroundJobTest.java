@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import plugins.WebOfTrust.AbstractJUnit4BaseTest;
-import plugins.WebOfTrust.WebOfTrustInterface;
 import freenet.support.Executor;
 import freenet.support.PooledExecutor;
 import freenet.support.PrioritizedTicker;
@@ -641,10 +640,5 @@ public class TickerDelayedBackgroundJobTest extends AbstractJUnit4BaseTest {
         for(int i=0; i < DEFAULT_JAVA_COMPILE_THRESHOLD; ++i) {
             new Sleeper().sleepUntil(1);
         }
-    }
-
-    @Override protected WebOfTrustInterface getWebOfTrust() {
-        fail("Not implemented");
-        return null;
     }
 }

@@ -48,7 +48,7 @@ public final class IdentityTest extends AbstractJUnit4BaseTest {
 	/**
 	 * @author Julien Cornuwel (batosai@freenetproject.org)
 	 */
-	@Before protected void setUp() throws Exception {
+	@Before public void setUp() throws Exception {
 		requestUri = new FreenetURI(requestUriString);
 		requestUriSSK = new FreenetURI(requestUriStringSSK);
 		requestUriSSKPlain = new FreenetURI(requestUriStringSSKPlain);
@@ -56,10 +56,9 @@ public final class IdentityTest extends AbstractJUnit4BaseTest {
 		insertUriSSK = new FreenetURI(insertUriStringSSK);
 		insertUriSSKPlain = new FreenetURI(insertUriStringSSKPlain);
 
-		identity = new Identity(getWebOfTrust(), requestUri, "test", true);
+		identity = new Identity(requestUri, "test", true);
 		identity.addContext("bleh");
 		identity.setProperty("testproperty","foo1a");
-		identity.storeAndCommit();
 		
 	}
 	
@@ -70,7 +69,7 @@ public final class IdentityTest extends AbstractJUnit4BaseTest {
 	 * - which meets the requirements of {@link AbstractJUnit3BaseTest#testClone(Class, Object, Object)}
 	 */
 	public void testClone() throws MalformedURLException, InvalidParameterException, IllegalArgumentException, IllegalAccessException, InterruptedException {
-		final Identity original = new Identity(getWebOfTrust(), getRandomInsertURI(), getRandomLatinString(Identity.MAX_NICKNAME_LENGTH), true);
+		final Identity original = new Identity(getRandomInsertURI(), getRandomLatinString(Identity.MAX_NICKNAME_LENGTH), true);
 		original.setEdition(10); // Make sure to use a non-default edition
 		original.setNewEditionHint(20); // Make sure to use a non-default edition hint
 		original.addContext(getRandomLatinString(Identity.MAX_CONTEXT_NAME_LENGTH));
@@ -91,8 +90,8 @@ public final class IdentityTest extends AbstractJUnit4BaseTest {
 	
 	@Test
 	public void testSerializeDeserialize() throws MalformedURLException, InvalidParameterException {
-		final Identity original = new Identity(getWebOfTrust(), new FreenetURI("USK", "foo-1"), getRandomLatinString(Identity.MAX_NICKNAME_LENGTH), true);
-		final Identity deserialized = (Identity)Persistent.deserialize(getWebOfTrust(), original.serialize());
+		final Identity original = new Identity(getRandomInsertURI().deriveRequestURIFromInsertURI(), getRandomLatinString(Identity.MAX_NICKNAME_LENGTH), true);
+		final Identity deserialized = (Identity)Persistent.deserialize(original.serialize());
 		
 		assertNotSame(original, deserialized);
 		assertEquals(original, deserialized);
@@ -100,7 +99,7 @@ public final class IdentityTest extends AbstractJUnit4BaseTest {
 	
 	@Test
 	public void testConstructors() throws MalformedURLException, InvalidParameterException {
-		final Identity identity = new Identity(getWebOfTrust(), "USK@sdFxM0Z4zx4-gXhGwzXAVYvOUi6NRfdGbyJa797bNAg,ZP4aASnyZax8nYOvCOlUebegsmbGQIXfVzw7iyOsXEc,AQACAAE/WebOfTrust/-1",
+		final Identity identity = new Identity("USK@sdFxM0Z4zx4-gXhGwzXAVYvOUi6NRfdGbyJa797bNAg,ZP4aASnyZax8nYOvCOlUebegsmbGQIXfVzw7iyOsXEc,AQACAAE/WebOfTrust/-1",
 				getRandomLatinString(Identity.MAX_NICKNAME_LENGTH), true);
 		
 		assertEquals(0, identity.getEdition());
@@ -110,14 +109,14 @@ public final class IdentityTest extends AbstractJUnit4BaseTest {
 	@Test
 	public void testInsertRequestUriMixup() throws InvalidParameterException {		
 		try {
-			new Identity(getWebOfTrust(), new FreenetURI(insertUriString), "test", true);
+			new Identity(new FreenetURI(insertUriString), "test", true);
 			fail("Identity creation with insert URI instead of request URI allowed!");
 		} catch (MalformedURLException e) {
 			// This is what we expect.
 		}
 		
 		try {
-			new OwnIdentity(getWebOfTrust(), requestUri, "test", true);
+			new OwnIdentity(requestUri, "test", true);
 			fail("OwnIdentity creation with request URI instead of insert URI allowed!");
 		} catch (MalformedURLException e) {
 			// This is what we expect.
@@ -187,7 +186,7 @@ public final class IdentityTest extends AbstractJUnit4BaseTest {
 		// We need the edition not to change so the assertNotSame test makes sense.
 		
 		final FreenetURI uriWithProperEdition = new FreenetURI("USK@R3Lp2s4jdX-3Q96c0A9530qg7JsvA9vi2K0hwY9wG-4,ipkgYftRpo0StBlYkJUawZhg~SO29NZIINseUtBhEfE,AQACAAE/WebOfTrust/0");
-		final Identity identity = new Identity(getWebOfTrust(), uriWithProperEdition, "test", true);
+		final Identity identity = new Identity(uriWithProperEdition, "test", true);
 		
 		assertEquals(uriWithProperEdition, identity.getRequestURI());
 		
@@ -221,8 +220,6 @@ public final class IdentityTest extends AbstractJUnit4BaseTest {
 		identity.markForRefetch();
 		assertEquals(FetchState.NotFetched, identity.getCurrentEditionFetchState());
 	}
-
-	public WebOfTrustInterface getWebOfTrust() { return new MockWebOfTrust(); }
 
 	@Test
 	public final void testSetEdition() throws InvalidParameterException, InterruptedException {

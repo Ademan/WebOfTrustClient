@@ -92,28 +92,6 @@ public abstract class AbstractJUnit4BaseTest {
         // Set back to null so testUncaughtExceptions() does not fail
         uncaughtException.set(null);
     }
-
-    /**
-     * Will be used as backend by member functions which generate random
-     * {@link Identity} / {@link Trust} / {@link Score} objects. 
-     */
-    protected abstract WebOfTrustInterface getWebOfTrust();
-
-    /**
-     * Returns a new {@link WebOfTrust} instance with an empty database. 
-     * Multiple calls to this are guaranteed to use a different database file each.
-     */
-    protected WebOfTrustInterface constructEmptyWebOfTrust() {
-    	try {
-    		File dataDir = mTempFolder.newFolder();
-    		File database = new File(dataDir, dataDir.getName() + ".db4o");
-    		assertFalse(database.exists());
-    		return new MockWebOfTrust();
-    	} catch(IOException e) {
-    		fail(e.toString());
-    		throw new RuntimeException(e);
-    	}
-    }
     
     /**
      * Returns a normally distributed value with a bias towards positive trust values.

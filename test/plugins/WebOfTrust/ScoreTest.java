@@ -26,15 +26,12 @@ public class ScoreTest extends AbstractJUnit4BaseTest {
 	private OwnIdentity b;
 	private Score score;
 
-	public WebOfTrustInterface getWebOfTrust() { return new MockWebOfTrust(); }
-
 	@Before
-	protected void setUp() throws Exception {
-		a = new OwnIdentity(getWebOfTrust(), insertUriA, "A", true); a.storeAndCommit();
-		b = new OwnIdentity(getWebOfTrust(), insertUriB, "B", true); b.storeAndCommit();
+	public void setUp() throws Exception {
+		a = new OwnIdentity(insertUriA, "A", true);
+		b = new OwnIdentity(insertUriB, "B", true);
 		
-		score = new Score(getWebOfTrust(), a,b,100,1,40); score.storeWithoutCommit();
-		Persistent.checkedCommit(getWebOfTrust().getDatabase(), this);
+		score = new Score(a,b,100,1,40);
 	}
 	
 	public void testClone() throws NotInTrustTreeException, IllegalArgumentException, IllegalAccessException, InterruptedException {
@@ -54,7 +51,7 @@ public class ScoreTest extends AbstractJUnit4BaseTest {
 	
 	public void testSerializeDeserialize() throws NotInTrustTreeException {
 		final Score original = score;
-		final Score deserialized = (Score)Persistent.deserialize(getWebOfTrust(), original.serialize());
+		final Score deserialized = (Score)Persistent.deserialize(original.serialize());
 		
 		assertNotSame(original, deserialized);
 		assertEquals(original, deserialized);
@@ -77,13 +74,13 @@ public class ScoreTest extends AbstractJUnit4BaseTest {
 	}
 	
 	public void testEquals() throws InterruptedException {
-		final Score score = new Score(getWebOfTrust(), a, b, 100, 3, 2);
+		final Score score = new Score(a, b, 100, 3, 2);
 		
 		do {
 			Thread.sleep(1);
 		} while(score.getDateOfCreation().equals(CurrentTimeUTC.get()));
 		
-		final Score equalScore = new Score(getWebOfTrust(), score.getTruster().clone(), score.getTrustee().clone(), score.getScore(), score.getRank(), score.getCapacity());
+		final Score equalScore = new Score(score.getTruster().clone(), score.getTrustee().clone(), score.getScore(), score.getRank(), score.getCapacity());
 		
 		assertEquals(score, score);
 		assertEquals(score, equalScore);
@@ -91,12 +88,12 @@ public class ScoreTest extends AbstractJUnit4BaseTest {
 		
 		final Object[] inequalObjects = new Object[] {
 			new Object(),
-			new Score(getWebOfTrust(), (OwnIdentity)score.getTrustee(), score.getTruster(), score.getScore(), score.getRank(), score.getCapacity()),
-			new Score(getWebOfTrust(), score.getTruster(), score.getTruster(), score.getScore(), score.getRank(), score.getCapacity()),
-			new Score(getWebOfTrust(), (OwnIdentity)score.getTrustee(), score.getTrustee(), score.getScore(), score.getRank(), score.getCapacity()),
-			new Score(getWebOfTrust(), score.getTruster(), score.getTrustee(), score.getScore()+1, score.getRank(), score.getCapacity()),
-			new Score(getWebOfTrust(), score.getTruster(), score.getTrustee(), score.getScore(), score.getRank()+1, score.getCapacity()),
-			new Score(getWebOfTrust(), score.getTruster(), score.getTrustee(), score.getScore(), score.getRank(), score.getCapacity()+1),
+			new Score((OwnIdentity)score.getTrustee(), score.getTruster(), score.getScore(), score.getRank(), score.getCapacity()),
+			new Score(score.getTruster(), score.getTruster(), score.getScore(), score.getRank(), score.getCapacity()),
+			new Score((OwnIdentity)score.getTrustee(), score.getTrustee(), score.getScore(), score.getRank(), score.getCapacity()),
+			new Score(score.getTruster(), score.getTrustee(), score.getScore()+1, score.getRank(), score.getCapacity()),
+			new Score(score.getTruster(), score.getTrustee(), score.getScore(), score.getRank()+1, score.getCapacity()),
+			new Score(score.getTruster(), score.getTrustee(), score.getScore(), score.getRank(), score.getCapacity()+1),
 		};
 		
 		for(Object other : inequalObjects) {

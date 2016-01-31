@@ -27,16 +27,12 @@ public class TrustTest extends AbstractJUnit4BaseTest {
 	private Identity b;
 	private Trust trust;
 
-	@Override
-	public WebOfTrustInterface getWebOfTrust() { return new MockWebOfTrust(); }
-
 	@Before
-	protected void setUp() throws Exception {
-		a = new Identity(getWebOfTrust(), uriA, "A", true); a.storeWithoutCommit();
-		b = new Identity(getWebOfTrust(), uriB, "B", true); b.storeWithoutCommit();
+	public void setUp() throws Exception {
+		a = new Identity(uriA, "A", true);
+		b = new Identity(uriB, "B", true);
 		
-		trust = new Trust(getWebOfTrust(), a,b,(byte)100,"test"); trust.storeWithoutCommit();
-		Persistent.checkedCommit(getWebOfTrust().getDatabase(), this);
+		trust = new Trust(a,b,(byte)100,"test");
 	}
 	
 	public void testClone() throws DuplicateTrustException, NotTrustedException, IllegalArgumentException, IllegalAccessException, InterruptedException {
@@ -56,31 +52,31 @@ public class TrustTest extends AbstractJUnit4BaseTest {
 	
 	public void testConstructor() throws InvalidParameterException {		
 		try {
-			new Trust(getWebOfTrust(), a, null, (byte)100, "test");
+			new Trust(a, null, (byte)100, "test");
 			fail("Constructor allows trustee to be null");
 		}
 		catch(NullPointerException e) { }
 		
 		try {
-			new Trust(getWebOfTrust(), null, a, (byte)100, "test");
+			new Trust(null, a, (byte)100, "test");
 			fail("Constructor allows truster to be null");
 		}
 		catch(NullPointerException e) {}
 		
 		try {
-			new Trust(getWebOfTrust(), a, b, (byte)-101, "test");
+			new Trust(a, b, (byte)-101, "test");
 			fail("Constructor allows values less than -100");
 		}
 		catch(InvalidParameterException e) {}
 		
 		try {
-			new Trust(getWebOfTrust(), a, b, (byte)101, "test");
+			new Trust(a, b, (byte)101, "test");
 			fail("Constructor allows values higher than 100");
 		}
 		catch(InvalidParameterException e) {}
 		
 		try { 
-			new Trust(getWebOfTrust(), a, a, (byte)100, "test");
+			new Trust(a, a, (byte)100, "test");
 			fail("Constructor allows self-referential trust values");
 		}
 		catch(InvalidParameterException e) { }
@@ -88,7 +84,7 @@ public class TrustTest extends AbstractJUnit4BaseTest {
 	
 	public void testSerializeDeserialize() throws DuplicateTrustException, NotTrustedException {
 		final Trust original = trust.clone();
-		final Trust deserialized = (Trust)Persistent.deserialize(getWebOfTrust(), original.serialize());
+		final Trust deserialized = (Trust)Persistent.deserialize(original.serialize());
 		
 		assertNotSame(original, deserialized);
 		assertEquals(original, deserialized);
