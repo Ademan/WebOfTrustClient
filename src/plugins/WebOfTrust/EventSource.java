@@ -6,11 +6,6 @@ package plugins.WebOfTrust;
 import java.io.Serializable;
 import java.util.UUID;
 
-import plugins.WebOfTrust.SubscriptionManager.Client;
-import plugins.WebOfTrust.SubscriptionManager.Notification;
-import plugins.WebOfTrust.SubscriptionManager.Subscription;
-
-
 /**
  * Must be implemented by any classes which can be monitored by a {@link Subscription}.<br>
  * Classes which implement it are those whose objects are what is actually being monitored
