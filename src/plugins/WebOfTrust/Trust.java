@@ -210,7 +210,7 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 	 * @param comment A comment to explain the numeric trust value
 	 * @throws InvalidParameterException if the trust value is not between -100 and +100
 	 */
-	public Trust(WebOfTrustInterface myWoT, Identity truster, Identity trustee, byte value, String comment) throws InvalidParameterException {
+	public Trust(Identity truster, Identity trustee, byte value, String comment) throws InvalidParameterException {
 		if(truster == null)
 			throw new NullPointerException();
 		
@@ -396,7 +396,7 @@ public final class Trust extends Persistent implements Cloneable, EventSource {
 	@Override
 	public Trust clone() {
 		try {
-			Trust clone = new Trust(mWebOfTrust, getTruster().clone(), getTrustee().clone(), getValue(), getComment());
+			Trust clone = new Trust(getTruster().clone(), getTrustee().clone(), getValue(), getComment());
 			clone.setCreationDate(getCreationDate());
 			clone.mLastChangedDate = (Date)mLastChangedDate.clone();	// Clone it because date is mutable
 			clone.mTrusterTrustListEdition = mTrusterTrustListEdition; // Don't use the getter since it will re-query it from the actual Identity object which might have changed

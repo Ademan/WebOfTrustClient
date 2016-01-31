@@ -53,8 +53,8 @@ public final class OwnIdentity extends Identity implements Cloneable, Serializab
 	 * @throws InvalidParameterException If a given parameter is invalid
 	 * @throws MalformedURLException If insertURI isn't a valid insert URI.
 	 */
-	public OwnIdentity (WebOfTrustInterface myWoT, FreenetURI insertURI, String nickName, boolean publishTrustList) throws InvalidParameterException, MalformedURLException {	
-		super(myWoT,
+	public OwnIdentity (FreenetURI insertURI, String nickName, boolean publishTrustList) throws InvalidParameterException, MalformedURLException {	
+		super(
 				// If we don't set a document name, we will get "java.net.MalformedURLException: SSK URIs must have a document name (to avoid ambiguity)"
 				// when calling  FreenetURI.deriveRequestURIFromInsertURI().
 				// So to make sure that deriveRequestURIFromINsertURI() works, we just pass the URI through testAndNormalizeInsertURI() which
@@ -104,8 +104,8 @@ public final class OwnIdentity extends Identity implements Cloneable, Serializab
 	 * @throws InvalidParameterException If a given parameter is invalid
 	 * @throws MalformedURLException If insertURI is not a valid FreenetURI or a request URI instead of an insert URI.
 	 */
-	public OwnIdentity(WebOfTrustInterface myWoT, String insertURI, String nickName, boolean publishTrustList) throws InvalidParameterException, MalformedURLException {
-		this(myWoT, new FreenetURI(insertURI), nickName, publishTrustList);
+	public OwnIdentity(String insertURI, String nickName, boolean publishTrustList) throws InvalidParameterException, MalformedURLException {
+		this(new FreenetURI(insertURI), nickName, publishTrustList);
 	}
 	
 	/**
@@ -299,7 +299,7 @@ public final class OwnIdentity extends Identity implements Cloneable, Serializab
 	@Override
 	public final OwnIdentity clone() {
 		try {
-			OwnIdentity clone = new OwnIdentity(mWebOfTrust, getInsertURI(), getNickname(), doesPublishTrustList());
+			OwnIdentity clone = new OwnIdentity(getInsertURI(), getNickname(), doesPublishTrustList());
 			
 			clone.setEdition(getEdition());
 			clone.setNewEditionHint(getLatestEditionHint());

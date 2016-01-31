@@ -37,9 +37,6 @@ import freenet.pluginmanager.PluginRespirator;
  * @author xor (xor@freenetproject.org)
  */
 public final class DebugFCPClient implements FCPClientReferenceImplementation.ConnectionStatusChangedHandler {
-	
-	private final WebOfTrustInterface mWebOfTrust;
-	
 	private FCPClientReferenceImplementation mClient;
 	
 	/**
@@ -84,20 +81,18 @@ public final class DebugFCPClient implements FCPClientReferenceImplementation.Co
 	}
 
 	
-	private DebugFCPClient(final WebOfTrustInterface myWebOfTrust,
-	        final Map<String, Identity> identityStorage, PluginRespirator respirator) {
+	private DebugFCPClient(final Map<String, Identity> identityStorage, PluginRespirator respirator) {
 		mClient = new FCPClientReferenceImplementation(
 		    identityStorage, respirator, this);
-		mWebOfTrust = myWebOfTrust;
 		
 		mSynchronizationInProgress.put(Identity.class, false);
 		mSynchronizationInProgress.put(Trust.class, false);
 		mSynchronizationInProgress.put(Score.class, false);
 	}
 	
-	public static DebugFCPClient construct(final WebOfTrustInterface myWebOfTrust, PluginRespirator respirator) {
+	public static DebugFCPClient construct(PluginRespirator respirator) {
 		final HashMap<String, Identity> identityStorage = new HashMap<String, Identity>();
-		final DebugFCPClient client = new DebugFCPClient(myWebOfTrust, identityStorage, respirator);
+		final DebugFCPClient client = new DebugFCPClient(identityStorage, respirator);
 		client.mReceivedIdentities = identityStorage;
 		return client;
 	}
@@ -133,15 +128,7 @@ public final class DebugFCPClient implements FCPClientReferenceImplementation.Co
 		mClient.stop();
 		
 		Logger.normal(this, "terminate(): Amending edition hints...");
-		// Event-notifications does not propagate edition hints because that would cause a lot of traffic so we need to set them manually
-		final Collection<Identity> allIdentities = mWebOfTrust.getAllIdentities();
-		for(final Identity identity : allIdentities) {
-			final Identity received = mReceivedIdentities.get(identity.getID());
-			if(received == null)
-				continue;
-			
-			received.forceSetNewEditionHint(identity.getLatestEditionHint());
-		}
+
 		Logger.normal(this, "terminate() finished.");
 	}
 	

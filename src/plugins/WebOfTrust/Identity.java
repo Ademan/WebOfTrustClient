@@ -272,7 +272,7 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * @throws InvalidParameterException if a supplied parameter is invalid
 	 * @throws MalformedURLException if newRequestURI isn't a valid request URI
 	 */
-	protected Identity(WebOfTrustInterface myWoT, FreenetURI newRequestURI, String newNickname, boolean doesPublishTrustList) throws InvalidParameterException, MalformedURLException {
+	protected Identity(FreenetURI newRequestURI, String newNickname, boolean doesPublishTrustList) throws InvalidParameterException, MalformedURLException {
         // Also takes care of setting the edition to 0 - see below for explanation
         final FreenetURI normalizedRequestURI = testAndNormalizeRequestURI(newRequestURI);
         mRequestURIString = normalizedRequestURI.toString();
@@ -311,10 +311,10 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	 * @throws InvalidParameterException if a supplied parameter is invalid
 	 * @throws MalformedURLException if the supplied requestURI isn't a valid request URI
 	 */
-	public Identity(WebOfTrustInterface myWoT, String newRequestURI, String newNickname, boolean doesPublishTrustList)
+	public Identity(String newRequestURI, String newNickname, boolean doesPublishTrustList)
 		throws InvalidParameterException, MalformedURLException {
 		
-		this(myWoT, new FreenetURI(newRequestURI), newNickname, doesPublishTrustList);
+		this(new FreenetURI(newRequestURI), newNickname, doesPublishTrustList);
 	}
 
 	/**
@@ -985,7 +985,7 @@ public class Identity extends Persistent implements Cloneable, EventSource {
 	@Override
 	public Identity clone() {
 		try {
-			Identity clone = new Identity(mWebOfTrust, getRequestURI(), getNickname(), doesPublishTrustList());
+			Identity clone = new Identity(getRequestURI(), getNickname(), doesPublishTrustList());
 			
 			clone.setEdition(getEdition());
 			clone.setNewEditionHint(getLatestEditionHint());

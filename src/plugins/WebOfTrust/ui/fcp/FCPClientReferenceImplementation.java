@@ -16,12 +16,10 @@ import java.util.UUID;
 import plugins.WebOfTrust.EventSource;
 import plugins.WebOfTrust.Identity;
 import plugins.WebOfTrust.Identity.FetchState;
-import plugins.WebOfTrust.MockWebOfTrust;
 import plugins.WebOfTrust.OwnIdentity;
 import plugins.WebOfTrust.Score;
 import plugins.WebOfTrust.SubscriptionManager;
 import plugins.WebOfTrust.Trust;
-import plugins.WebOfTrust.WebOfTrustInterface;
 import plugins.WebOfTrust.exceptions.InvalidParameterException;
 import plugins.WebOfTrust.util.jobs.DelayedBackgroundJob;
 import plugins.WebOfTrust.util.jobs.TickerDelayedBackgroundJob;
@@ -311,13 +309,9 @@ public final class FCPClientReferenceImplementation {
 		for(FCPMessageHandler handler : handlers)
 			mFCPMessageHandlers.put(handler.getMessageName(), handler);
 		
-		// To prevent client-plugins which copy-paste this reference implementation from having to copy-paste the WebOfTrust class,
-		// we use MockWebOfTrust as a replacement.
-		final MockWebOfTrust wot = new MockWebOfTrust();
-		
-		mParsers.put(SubscriptionType.Identities, new IdentityParser(wot));
-		mParsers.put(SubscriptionType.Trusts, new TrustParser(wot, mIdentityStorage));
-		mParsers.put(SubscriptionType.Scores, new ScoreParser(wot, mIdentityStorage));
+		mParsers.put(SubscriptionType.Identities, new IdentityParser());
+		mParsers.put(SubscriptionType.Trusts, new TrustParser(mIdentityStorage));
+		mParsers.put(SubscriptionType.Scores, new ScoreParser(mIdentityStorage));
 	}
 	
 	/**
@@ -1126,12 +1120,7 @@ public final class FCPClientReferenceImplementation {
 	 * messages which contain multiple of them is a superset so the single-element parser can be used.
 	 */
 	public static abstract class FCPEventSourceContainerParser<T extends EventSource> {
-		
-		protected final WebOfTrustInterface mWoT;
-		
-		public FCPEventSourceContainerParser(final WebOfTrustInterface myWebOfTrust) {
-			mWoT = myWebOfTrust;
-		}
+		public FCPEventSourceContainerParser() {}
 		
 		/**
 		 * @Deprecated TODO: Currently unused. Could be put to use if we implement public functions
@@ -1173,9 +1162,7 @@ public final class FCPClientReferenceImplementation {
 	 */
 	public static final class IdentityParser extends FCPEventSourceContainerParser<Identity> {
 
-		public IdentityParser(final WebOfTrustInterface myWebOfTrust) {
-			super(myWebOfTrust);
-		}
+		public IdentityParser() {}
 		
 		@Override
 		protected SimpleFieldSet getOwnSubset(SimpleFieldSet sfs) throws FSParseException {
@@ -1201,9 +1188,9 @@ public final class FCPClientReferenceImplementation {
 	 		final Identity identity;
 	 		
 	 		if(type.equals("Identity"))
-	 			identity = new Identity(mWoT, requestURI, nickname, doesPublishTrustList);
+	 			identity = new Identity(requestURI, nickname, doesPublishTrustList);
 	 		else if(type.equals("OwnIdentity"))
-	 			identity = new OwnIdentity(mWoT, insertURI, nickname, doesPublishTrustList);
+	 			identity = new OwnIdentity(insertURI, nickname, doesPublishTrustList);
 	 		else
 	 			throw new RuntimeException("Unknown type: " + type);
 	 		
@@ -1240,8 +1227,7 @@ public final class FCPClientReferenceImplementation {
 
 		private final Map<String, Identity> mIdentities;
 		
-		public TrustParser(final WebOfTrustInterface myWebOfTrust, final Map<String, Identity> myIdentities) {
-			super(myWebOfTrust);
+		public TrustParser(final Map<String, Identity> myIdentities) {
 			mIdentities = myIdentities;
 		}
 
@@ -1264,7 +1250,7 @@ public final class FCPClientReferenceImplementation {
 			final long trusterEdition = sfs.getLong("TrusterEdition");
 			final UUID versionID = UUID.fromString(sfs.get("VersionID"));
 			
-			final Trust trust = new Trust(mWoT, mIdentities.get(trusterID), mIdentities.get(trusteeID), value, comment);
+			final Trust trust = new Trust(mIdentities.get(trusterID), mIdentities.get(trusteeID), value, comment);
 			trust.forceSetTrusterEdition(trusterEdition);
 			trust.setVersionID(versionID);
 			
@@ -1280,8 +1266,7 @@ public final class FCPClientReferenceImplementation {
 		
 		private final Map<String, Identity> mIdentities;
 		
-		public ScoreParser(final WebOfTrustInterface myWebOfTrust, final Map<String, Identity> myIdentities) {
-			super(myWebOfTrust);
+		public ScoreParser(final Map<String, Identity> myIdentities) {
 			mIdentities = myIdentities;
 		}
 
@@ -1306,7 +1291,7 @@ public final class FCPClientReferenceImplementation {
 			
 			final OwnIdentity truster = (OwnIdentity)mIdentities.get(trusterID);
 			final Identity trustee = mIdentities.get(trusteeID);
-			final Score score = new Score(mWoT, truster, trustee, value, rank, capacity);
+			final Score score = new Score(truster, trustee, value, rank, capacity);
 			score.setVersionID(versionID);
 			
 			return score;

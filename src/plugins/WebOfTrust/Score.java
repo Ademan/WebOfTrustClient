@@ -157,7 +157,7 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 	 * @param myRank How far the Identity is from the tree's root. 
 	 * @param myCapacity How much point the trusted Identity can add to its trustees score.
 	 */
-	public Score(WebOfTrustInterface myWoT, OwnIdentity myTruster, Identity myTrustee, int myValue, int myRank, int myCapacity) {
+	public Score(OwnIdentity myTruster, Identity myTrustee, int myValue, int myRank, int myCapacity) {
 		if(myTruster == null)
 			throw new NullPointerException();
 			
@@ -344,7 +344,7 @@ public final class Score extends Persistent implements Cloneable, EventSource {
 
 	@Override
 	public Score clone() {
-		final Score clone = new Score(mWebOfTrust, getTruster().clone(), getTrustee().clone(), getScore(), getRank(), getCapacity());
+		final Score clone = new Score(getTruster().clone(), getTrustee().clone(), getScore(), getRank(), getCapacity());
 		clone.setCreationDate(getCreationDate());
 		clone.mLastChangedDate = (Date)mLastChangedDate.clone();	// Clone it because date is mutable
 		return clone;

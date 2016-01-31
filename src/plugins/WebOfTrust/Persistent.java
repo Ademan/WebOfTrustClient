@@ -41,11 +41,6 @@ public abstract class Persistent implements Serializable {
 	
 	/** @see Serializable */
 	private static transient final long serialVersionUID = 1L;
-
-	/**
-	 * A reference to the {@link WebOfTrustInterface} object with which this Persistent object is associated.
-	 */
-	protected transient WebOfTrustInterface mWebOfTrust;
 	
 	/**
 	 * The date when this persistent object was created. 
@@ -134,7 +129,7 @@ public abstract class Persistent implements Serializable {
 	}
 	
 	/** Inverse function of {@link #serialize()}. */
-	static final Persistent deserialize(final WebOfTrustInterface wot, final byte[] data) {
+	static final Persistent deserialize(final byte[] data) {
 		ByteArrayInputStream bis = null;
 		ObjectInputStream ois = null;
 		
